@@ -1,0 +1,17 @@
+{
+  "appId": "com.anoosh.app",
+  "appName": "Anoosh",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_anoosh",
+      "iconColor": "#7c5cff"
+    }
+  }
+}

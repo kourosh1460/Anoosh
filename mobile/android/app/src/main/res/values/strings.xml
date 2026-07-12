@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Anoosh</string>
+    <string name="title_activity_main">Anoosh</string>
+    <string name="package_name">com.anoosh.app</string>
+    <string name="custom_url_scheme">com.anoosh.app</string>
+    <string name="widget_description">Today’s tasks at a glance</string>
+</resources>

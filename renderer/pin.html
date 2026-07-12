@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+  <title>Pinned note</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body class="pin-body">
+  <div class="pin-wrap" id="pin-wrap">
+    <div class="pin-head" id="pin-head">
+      <div class="pin-title" id="pin-title"></div>
+      <button class="iconbtn" id="pin-open" title="Open in Anoosh"></button>
+      <button class="iconbtn" id="pin-unpin" title="Unlock from screen"></button>
+    </div>
+    <div class="pin-content" id="pin-content" contenteditable="true" spellcheck="false"></div>
+    <div class="pin-foot">
+      <span id="pin-saved">Synced</span>
+      <input type="range" id="pin-opacity" min="35" max="100" value="100" title="Window opacity">
+    </div>
+  </div>
+  <script src="js/icons.js"></script>
+  <script src="js/pin.js"></script>
+</body>
+</html>

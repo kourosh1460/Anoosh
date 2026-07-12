@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+mobile/node_modules/
+
+# build output
+dist/
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/capacitor-cordova-android-plugins/build/
+
+# local machine config
+mobile/android/local.properties
+
+# signing secrets — generate your own (see README)
+*.keystore
+keystore.properties
+
+# misc
+*.log
+Thumbs.db
+
+# local tooling config
+.claude/
+
