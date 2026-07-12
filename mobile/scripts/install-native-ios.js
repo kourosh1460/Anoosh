@@ -7,6 +7,13 @@ const plistPath = path.join(__dirname, '..', 'ios', 'App', 'App', 'Info.plist');
 if (!fs.existsSync(plistPath)) { console.error('ios project not found'); process.exit(1); }
 let plist = fs.readFileSync(plistPath, 'utf8');
 
+// Capacitor StatusBar.setStyle only works when this is NO.
+if (plist.includes('<key>UIViewControllerBasedStatusBarAppearance</key>\n\t<true/>')) {
+  plist = plist.replace('<key>UIViewControllerBasedStatusBarAppearance</key>\n\t<true/>',
+    '<key>UIViewControllerBasedStatusBarAppearance</key>\n\t<false/>');
+  console.log('patched Info.plist (status bar appearance)');
+}
+
 if (!plist.includes('NSAppTransportSecurity')) {
   plist = plist.replace('</dict>\n</plist>', `\t<key>NSAppTransportSecurity</key>
 \t<dict>

@@ -316,7 +316,7 @@ Views.settings = {
     const modsEl = container.querySelector('#st-modules');
     for (const m of DashModules.list()) {
       const row = el(`<div class="set-row">
-        <div class="set-label"><div class="sl-title">${icon(m.icon)} ${esc(m.title)}</div>
+        <div class="set-label"><div class="sl-title"><span class="sl-ic">${icon(m.icon)}</span> ${esc(m.title)}</div>
           <div class="sl-sub">${esc(m.desc)}</div></div>
         <button class="toggle ${DashModules.isEnabled(m.id) ? 'on' : ''}"></button>
       </div>`);
