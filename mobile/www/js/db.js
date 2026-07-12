@@ -13,7 +13,7 @@ const DB = (() => {
 
   const EMPTY = () => ({
     version: 2, tasks: [], notes: [], folders: [], ideas: [], events: [],
-    reminders: [], sessions: [], tombstones: [], settings: {}
+    reminders: [], habits: [], cycle: [], sessions: [], tombstones: [], settings: {}
   });
 
   let data = EMPTY();

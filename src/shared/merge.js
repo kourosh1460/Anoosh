@@ -21,7 +21,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var COLLECTIONS = ['tasks', 'notes', 'folders', 'ideas', 'events', 'reminders'];
+  var COLLECTIONS = ['tasks', 'notes', 'folders', 'ideas', 'events', 'reminders', 'habits', 'cycle'];
   var TOMBSTONE_TTL_MS = 180 * 24 * 3600 * 1000; // forget deletions after ~6 months
 
   function ts(iso) {

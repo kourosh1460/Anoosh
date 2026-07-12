@@ -70,6 +70,7 @@ Views.dashboard = {
                 <div class="card-title">${icon('bulb')} Idea shelf</div>
                 <div class="stat-row" id="dh-ideastats"></div>
               </div>
+              <div id="dh-modules"></div>
             </div>
           </div>
         </div>
@@ -285,14 +286,22 @@ Views.dashboard = {
     container.querySelector('#dh-cal').addEventListener('click', () => App.show('calendar'));
     container.querySelector('#dh-notes').addEventListener('click', () => App.show('notes'));
 
-    function drawAll() { drawHero(); drawTasks(); drawUpcoming(); drawTimerCard(); drawRecent(); drawIdeas(); }
+    function drawAll() {
+      drawHero(); drawTasks(); drawUpcoming(); drawTimerCard(); drawRecent(); drawIdeas();
+      DashModules.renderSections(container.querySelector('#dh-modules'));
+    }
     drawAll();
 
     const clock = setInterval(() => { drawHero(); if (TimerEngine.isActive()) drawTimerCard(); }, 1000 * 20);
     const timerClock = setInterval(() => { if (TimerEngine.isActive()) drawTimerCard(); }, 1000);
     const unsubTimer = TimerEngine.subscribe(() => drawTimerCard());
     const unsub = DB.subscribe((ch) => {
-      if (ch.kind === 'settings') { drawHero(); return; }
+      if (ch.kind === 'settings') {
+        // module toggles must reshape the dashboard immediately
+        drawHero();
+        DashModules.renderSections(container.querySelector('#dh-modules'));
+        return;
+      }
       drawAll();
     });
 

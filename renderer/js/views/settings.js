@@ -114,6 +114,23 @@ Views.settings = {
           </div>
 
           <div class="card">
+            <div class="card-title">${icon('home')} Dashboard modules</div>
+            <div class="set-row" style="border:none;padding-bottom:2px">
+              <div class="set-label"><div class="sl-sub">Optional sections for the Today page. All off by default — flip one on and it appears immediately.</div></div>
+            </div>
+            <div id="st-modules"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">${icon('settings')} Security</div>
+            <div class="set-row">
+              <div class="set-label"><div class="sl-title">App lock</div>
+                <div class="sl-sub" id="st-lockstate">Ask for a PIN when Anoosh opens. You choose the PIN — there is no default.</div></div>
+              <span id="st-lockbtns" style="display:flex;gap:8px"></span>
+            </div>
+          </div>
+
+          <div class="card">
             <div class="card-title">${icon('monitor')} System</div>
             <div class="set-row">
               <div class="set-label"><div class="sl-title">Launch at startup</div><div class="sl-sub">Open Anoosh automatically when Windows starts</div></div>
@@ -130,6 +147,10 @@ Views.settings = {
               <div class="set-label"><div class="sl-title">Backup</div><div class="sl-sub">Everything lives offline in one JSON file</div></div>
               <button class="btn" id="st-export">${icon('download')} Export</button>
               <button class="btn" id="st-import">${icon('upload')} Import</button>
+            </div>
+            <div class="set-row">
+              <div class="set-label"><div class="sl-title">Welcome tour</div><div class="sl-sub">Replay the short first-launch introduction</div></div>
+              <button class="btn sm" id="st-tour">${icon('sparkle')} Show tour</button>
             </div>
           </div>
 
@@ -291,6 +312,77 @@ Views.settings = {
       } else if (res.error) toast(res.error, { icon: 'x' });
     });
 
+    /* dashboard modules */
+    const modsEl = container.querySelector('#st-modules');
+    for (const m of DashModules.list()) {
+      const row = el(`<div class="set-row">
+        <div class="set-label"><div class="sl-title">${icon(m.icon)} ${esc(m.title)}</div>
+          <div class="sl-sub">${esc(m.desc)}</div></div>
+        <button class="toggle ${DashModules.isEnabled(m.id) ? 'on' : ''}"></button>
+      </div>`);
+      row.querySelector('.toggle').addEventListener('click', (e) => {
+        const on = !DashModules.isEnabled(m.id);
+        DashModules.setEnabled(m.id, on);
+        e.currentTarget.classList.toggle('on', on);
+        toast(on ? `${m.title} added to Today` : `${m.title} removed`, { icon: m.icon });
+      });
+      modsEl.appendChild(row);
+    }
+
+    /* app lock */
+    function pinPrompt(title, cb) {
+      const body = el(`<div class="field"><label>${esc(title)}</label>
+        <input class="input" type="password" inputmode="numeric" maxlength="10" placeholder="4–10 digits" id="pl-pin"></div>`);
+      const foot = el(`<div></div>`);
+      const ok = el(`<button class="btn primary">Confirm</button>`);
+      foot.appendChild(ok);
+      const m = openModal({ title: 'App lock', body, foot });
+      const submit = () => { const v = body.querySelector('#pl-pin').value; m.close(); cb(v); };
+      ok.addEventListener('click', submit);
+      body.querySelector('#pl-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+      setTimeout(() => body.querySelector('#pl-pin').focus(), 60);
+    }
+    function drawLock() {
+      const rec = s().appLock;
+      const btns = container.querySelector('#st-lockbtns');
+      container.querySelector('#st-lockstate').textContent = rec
+        ? 'Lock is on — Anoosh asks for your PIN at startup.'
+        : 'Ask for a PIN when Anoosh opens. You choose the PIN — there is no default.';
+      btns.innerHTML = '';
+      if (!rec) {
+        const set = el(`<button class="btn primary sm">Set PIN</button>`);
+        set.addEventListener('click', () => pinPrompt('Choose a PIN', async (pin) => {
+          try {
+            DB.setSettings({ appLock: await Lock.create(pin) });
+            toast('App lock enabled', { icon: 'checkCircle' });
+            drawLock();
+          } catch (e) { toast(e.message, { icon: 'x' }); }
+        }));
+        btns.appendChild(set);
+      } else {
+        const change = el(`<button class="btn sm">Change</button>`);
+        const remove = el(`<button class="btn sm danger">Remove</button>`);
+        const requirePin = (then) => pinPrompt('Current PIN', async (pin) => {
+          if (await Lock.verify(pin, rec)) then();
+          else toast('Wrong PIN', { icon: 'x' });
+        });
+        change.addEventListener('click', () => requirePin(() =>
+          pinPrompt('New PIN', async (pin) => {
+            try {
+              DB.setSettings({ appLock: await Lock.create(pin) });
+              toast('PIN changed', { icon: 'checkCircle' });
+            } catch (e) { toast(e.message, { icon: 'x' }); }
+          })));
+        remove.addEventListener('click', () => requirePin(() => {
+          DB.setSettings({ appLock: null });
+          toast('App lock removed', { icon: 'checkCircle' });
+          drawLock();
+        }));
+        btns.append(change, remove);
+      }
+    }
+    drawLock();
+
     /* system */
     const autoT = container.querySelector('#st-autolaunch');
     autoT.classList.toggle('on', s().autoLaunch !== false);
@@ -307,6 +399,7 @@ Views.settings = {
       container.querySelector('#st-path').textContent = info.dataFile;
       container.querySelector('#st-about').textContent = `Anoosh ${info.version} — offline productivity for Windows`;
     });
+    container.querySelector('#st-tour').addEventListener('click', () => showOnboarding(true));
     container.querySelector('#st-export').addEventListener('click', async () => {
       const res = await window.aurora.exportData();
       if (res.ok) toast('Backup exported', { icon: 'download' });

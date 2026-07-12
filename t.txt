@@ -1,0 +1,28 @@
+✔ create + verify round-trips; wrong PIN rejected (2225.6086ms)
+✔ same PIN gives different hashes (unique salt) — no rainbow lookups (1022.1789ms)
+✔ rejects weak/invalid PIN formats and bad records (0.4426ms)
+✔ items unique to each side are combined (2.5499ms)
+✔ conflict: newer updatedAt wins regardless of side (0.231ms)
+✔ deletion beats older edits (tombstone wins) (1.0032ms)
+✔ edit after deletion resurrects the item and drops the tombstone (0.2298ms)
+✔ merge is symmetric (10.7471ms)
+✔ dangling links and folder refs are scrubbed after merge (0.3917ms)
+✔ sessions are unioned without duplicates (0.1905ms)
+✔ ancient tombstones are pruned, recent ones kept (0.2191ms)
+✔ settings are never merged (0.1786ms)
+✔ diffStats reports adds/updates/removes (0.5097ms)
+✔ starts empty, upserts and persists across reloads (4.1501ms)
+✔ remove deletes the item and scrubs dangling links everywhere (3.3107ms)
+✔ settings merge instead of replace (1.2057ms)
+✔ corrupt file is backed up, store starts fresh instead of crashing (2.9718ms)
+✔ replaceAll validates shape and drops junk (2.0866ms)
+✔ removals leave tombstones for sync; applyMerged keeps settings (1.5171ms)
+✔ rejects unknown collections and items without ids (1.955ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3329.5714

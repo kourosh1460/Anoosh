@@ -157,6 +157,42 @@ const App = (() => {
     draw();
   }
 
+  /* ---------- app lock ---------- */
+  function maybeLock() {
+    const rec = DB.settings().appLock;
+    if (!rec) return Promise.resolve();
+    return new Promise((resolve) => {
+      const overlay = el(`<div class="lock-screen">
+        <div class="lock-card">
+          <div class="tb-logo" style="width:44px;height:44px;border-radius:14px"></div>
+          <div class="lock-title">Anoosh is locked</div>
+          <input class="input lock-pin" type="password" inputmode="numeric" maxlength="10" placeholder="PIN" autocomplete="off">
+          <div class="lock-err" hidden>Wrong PIN — try again</div>
+        </div>
+      </div>`);
+      document.body.appendChild(overlay);
+      const input = overlay.querySelector('.lock-pin');
+      const err = overlay.querySelector('.lock-err');
+      let busy = false;
+      input.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter' || busy) return;
+        busy = true;
+        if (await Lock.verify(input.value, rec)) {
+          overlay.remove();
+          resolve();
+        } else {
+          err.hidden = false;
+          input.value = '';
+          overlay.querySelector('.lock-card').classList.remove('shake');
+          void overlay.offsetWidth;
+          overlay.querySelector('.lock-card').classList.add('shake');
+        }
+        busy = false;
+      });
+      setTimeout(() => input.focus(), 60);
+    });
+  }
+
   /* ---------- first run ---------- */
   function firstRunContent() {
     if (DB.all('notes').length || DB.all('tasks').length || DB.all('ideas').length) return;
@@ -245,6 +281,8 @@ const App = (() => {
     applyTheme();
     buildNav();
     show('dashboard');
+    await maybeLock();
+    showOnboarding();
 
     /* titlebar */
     document.getElementById('tb-min').innerHTML = icon('minimize');

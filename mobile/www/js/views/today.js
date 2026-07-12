@@ -29,6 +29,7 @@ MViews.today = {
           <div class="card-title">${icon('note')} Recent notes</div>
           <div id="td-recent"></div>
         </div>
+        <div id="td-modules"></div>
       </div>`;
 
     function drawHero() {
@@ -140,7 +141,10 @@ MViews.today = {
     container.querySelector('#td-alltasks').addEventListener('click', () => App.show('tasks'));
     container.querySelector('#td-cal').addEventListener('click', () => App.show('calendar'));
 
-    function drawAll() { drawHero(); drawStats(); drawTasks(); drawUpcoming(); drawRecent(); }
+    function drawAll() {
+      drawHero(); drawStats(); drawTasks(); drawUpcoming(); drawRecent();
+      DashModules.renderSections(container.querySelector('#td-modules'));
+    }
     drawAll();
     const clock = setInterval(drawHero, 30000);
     const unsub = DB.subscribe(() => drawAll());

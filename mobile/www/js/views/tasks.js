@@ -41,6 +41,11 @@ function openTaskSheet(taskId, presets = {}) {
     <div class="field"><label>Priority</label>
       <div class="seg" id="tm-prio">${PRIO_LABEL.map((p, i) =>
         `<button data-p="${i}" class="${task.priority === i ? 'active' : ''}">${p}</button>`).join('')}</div></div>
+    <div class="field"><label>Color</label>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span id="tm-color"></span>
+        <button class="btn sm ghost" id="tm-color-clear">Default</button>
+      </div></div>
     <div class="field"><label>Reminder</label>
       <button class="btn sm" id="tm-remind" style="align-self:flex-start">${icon('bell')} Remind me at due time</button></div>
     <div class="field"><label>Linked items</label>
@@ -54,6 +59,12 @@ function openTaskSheet(taskId, presets = {}) {
     const b = e.target.closest('button'); if (!b) return;
     task.priority = Number(b.dataset.p);
     body.querySelectorAll('#tm-prio button').forEach(x => x.classList.toggle('active', x === b));
+  });
+
+  body.querySelector('#tm-color').appendChild(swatchRow(task.color || null, (c) => { task.color = c; }));
+  body.querySelector('#tm-color-clear').addEventListener('click', () => {
+    task.color = null;
+    body.querySelectorAll('#tm-color .swatch').forEach(sw => sw.classList.remove('active'));
   });
 
   let wantReminder = false;
@@ -111,8 +122,8 @@ function openTaskSheet(taskId, presets = {}) {
 }
 
 function taskRow(t, { compact = false } = {}) {
-  const row = el(`<div class="task-row ${t.done ? 'done' : ''}" data-id="${t.id}">
-    <button class="tcheck ${t.done ? 'on' : ''} ${t.priority ? 'prio-' + t.priority : ''}">${icon('check')}</button>
+  const row = el(`<div class="task-row ${t.done ? 'done' : ''}" data-id="${t.id}" ${t.color ? `style="--task-color:${esc(t.color)}"` : ''}>
+    <button class="tcheck ${t.done ? 'on' : ''} ${t.priority ? 'prio-' + t.priority : ''} ${t.color ? 'colored' : ''}">${icon('check')}</button>
     <div class="task-main">
       <div class="task-title">${esc(t.title)}</div>
       <div class="task-meta">

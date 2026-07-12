@@ -24,6 +24,9 @@ const copies = [
   ['java/MainActivity.java', path.join(javaDir, 'MainActivity.java')],
   ['java/TodayWidget.java', path.join(javaDir, 'TodayWidget.java')],
   ['java/WidgetBridgePlugin.java', path.join(javaDir, 'WidgetBridgePlugin.java')],
+  ['java/ModuleWidgets.java', path.join(javaDir, 'ModuleWidgets.java')],
+  ['res/layout/widget_module.xml', path.join(resDir, 'layout', 'widget_module.xml')],
+  ['res/xml/widget_module_info.xml', path.join(resDir, 'xml', 'widget_module_info.xml')],
   ['res/layout/widget_today.xml', path.join(resDir, 'layout', 'widget_today.xml')],
   ['res/values/widget_styles.xml', path.join(resDir, 'values', 'widget_styles.xml')],
   ['res/drawable/widget_bg.xml', path.join(resDir, 'drawable', 'widget_bg.xml')],
@@ -58,6 +61,29 @@ for (const perm of ['android.permission.POST_NOTIFICATIONS', 'android.permission
     manifest = manifest.replace('</manifest>',
       `    <uses-permission android:name="${perm}" />\n</manifest>`);
     console.log('patched manifest: ' + perm);
+  }
+}
+for (const [cls, label] of [
+  ['ModuleWidgets$HabitsWidget', 'Anoosh Habits'],
+  ['ModuleWidgets$FocusWidget', 'Anoosh Focus'],
+  ['ModuleWidgets$CountdownWidget', 'Anoosh Countdown']
+]) {
+  if (!manifest.includes(cls)) {
+    const receiver = `
+        <receiver
+            android:name=".${cls}"
+            android:exported="true"
+            android:label="${label}">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_module_info" />
+        </receiver>
+`;
+    manifest = manifest.replace('</application>', receiver + '    </application>');
+    console.log('patched manifest: ' + cls);
   }
 }
 if (!manifest.includes('TodayWidget')) {

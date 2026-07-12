@@ -17,6 +17,8 @@ const EMPTY = () => ({
   ideas: [],
   events: [],
   reminders: [],
+  habits: [],
+  cycle: [],
   sessions: [],
   tombstones: [],
   settings: {}

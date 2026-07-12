@@ -22,6 +22,14 @@ public class WidgetBridgePlugin extends Plugin {
             for (int id : ids) {
                 mgr.updateAppWidget(id, TodayWidget.build(ctx));
             }
+            // module widgets
+            android.appwidget.AppWidgetProvider[] mods = {
+                new ModuleWidgets.HabitsWidget(), new ModuleWidgets.FocusWidget(), new ModuleWidgets.CountdownWidget()
+            };
+            for (android.appwidget.AppWidgetProvider p : mods) {
+                int[] mids = mgr.getAppWidgetIds(new ComponentName(ctx, p.getClass()));
+                if (mids.length > 0) p.onUpdate(ctx, mgr, mids);
+            }
         } catch (Exception ignored) { }
         call.resolve();
     }

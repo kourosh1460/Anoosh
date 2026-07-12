@@ -265,6 +265,7 @@ Views.calendar = {
                   <div class="cal-month-sub" id="cl-titlesub"></div>
                 </div>
               </div>
+              <div class="cal-filters" id="cl-filters"></div>
               <div class="cal-grid-head" id="cl-dow"></div>
               <div class="cal-grid" id="cl-grid"></div>
             </div>
@@ -283,16 +284,35 @@ Views.calendar = {
         </div>
       </div>`;
 
+    /* ---------- filters ---------- */
+    const filters = () => Object.assign({ tasks: true, events: true, reminders: true, cycle: true }, DB.settings().calFilters);
+    function drawFilters() {
+      const wrap = container.querySelector('#cl-filters');
+      const f = filters();
+      const defs = [['events', 'Events', 'calendar'], ['tasks', 'Tasks', 'tasks'], ['reminders', 'Reminders', 'bell']];
+      if (DashModules.isEnabled('cycle') && DashModules.getCycle()) defs.push(['cycle', 'Cycle', 'cycle']);
+      wrap.innerHTML = '';
+      for (const [key, label, ic] of defs) {
+        const chip = el(`<button class="chip link cal-filter ${f[key] ? 'on' : ''}">${icon(ic)}<span>${label}</span></button>`);
+        chip.addEventListener('click', () => {
+          const nf = filters(); nf[key] = !nf[key];
+          DB.setSettings({ calFilters: nf });
+        });
+        wrap.appendChild(chip);
+      }
+    }
+
     /* ---------- data per day ---------- */
     function itemsOn(dateStr) {
       const out = [];
-      for (const ev of DB.all('events')) {
+      const f = filters();
+      if (f.events) for (const ev of DB.all('events')) {
         if (ev.date === dateStr) out.push({ kind: 'event', time: ev.time || '', title: ev.title, color: ev.color, item: ev });
       }
-      for (const task of DB.all('tasks')) {
-        if (task.dueDate === dateStr) out.push({ kind: 'task', time: task.dueTime || '', title: task.title, color: 'var(--accent)', done: task.done, item: task });
+      if (f.tasks) for (const task of DB.all('tasks')) {
+        if (task.dueDate === dateStr) out.push({ kind: 'task', time: task.dueTime || '', title: task.title, color: task.color || 'var(--accent)', done: task.done, item: task });
       }
-      for (const r of DB.all('reminders')) {
+      if (f.reminders) for (const r of DB.all('reminders')) {
         if (!r.at) continue;
         const d = new Date(r.at);
         if (!isNaN(d) && Fmt.dateToStr(d) === dateStr) {
@@ -385,7 +405,9 @@ Views.calendar = {
 
     function drawGrid() {
       drawTitle();
+      drawFilters();
       drawDowHeader();
+      const cycleOn = filters().cycle && DashModules.isEnabled('cycle') && DashModules.getCycle();
       const grid = container.querySelector('#cl-grid');
       grid.innerHTML = '';
       const today = Fmt.todayStr();
@@ -406,6 +428,10 @@ Views.calendar = {
             <span class="cc-alt">${altSpans(t)}</span></div>
           <div class="cc-items"></div>
         </div>`);
+        if (cycleOn) {
+          const phase = DashModules.cyclePhaseFor(ds);
+          if (phase) cellEl.appendChild(el(`<span class="cc-cycle" style="background:${DashModules.CYCLE_COLORS[phase]}" title="${phase}"></span>`));
+        }
         const itemsEl = cellEl.querySelector('.cc-items');
         for (const it of items.slice(0, 3)) {
           itemsEl.appendChild(el(`<div class="cc-ev ${it.done ? 'done' : ''} ${it.kind === 'task' ? 'is-task' : ''}" style="--ev-color:${it.color}">${it.kind === 'reminder' ? '🔔 ' : ''}${esc(it.title || 'Untitled')}</div>`));

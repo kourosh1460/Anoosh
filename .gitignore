@@ -23,3 +23,7 @@ Thumbs.db
 # local tooling config
 .claude/
 
+
+mobile/ios/App/Pods/
+mobile/ios/App/build/
+

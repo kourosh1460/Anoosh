@@ -12,14 +12,22 @@ const Platform = (() => {
   const LS_KEY = 'anoosh-data';
 
   /* ---------- storage ---------- */
+  const BAK_FILE = 'anoosh-data.bak.json';
+  const TMP_FILE = 'anoosh-data.tmp.json';
+  let backupDone = false;
+
+  async function readJson(path) {
+    const res = await P().Filesystem.readFile({ path, directory: 'DATA', encoding: 'utf8' });
+    return JSON.parse(res.data);
+  }
+
   async function loadData() {
     if (isNative) {
-      try {
-        const res = await P().Filesystem.readFile({
-          path: DATA_FILE, directory: 'DATA', encoding: 'utf8'
-        });
-        return JSON.parse(res.data);
-      } catch (err) { return null; } // first run
+      // main file → backup → temp (in case a rename was interrupted)
+      for (const path of [DATA_FILE, BAK_FILE, TMP_FILE]) {
+        try { return await readJson(path); } catch (err) { /* try next */ }
+      }
+      return null; // first run
     }
     try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch (e) { return null; }
   }
@@ -27,9 +35,22 @@ const Platform = (() => {
   async function saveData(obj) {
     const text = JSON.stringify(obj);
     if (isNative) {
-      await P().Filesystem.writeFile({
-        path: DATA_FILE, directory: 'DATA', encoding: 'utf8', data: text
-      });
+      // Once per session, preserve the last known-good file as a backup.
+      if (!backupDone) {
+        backupDone = true;
+        try {
+          await P().Filesystem.copy({ from: DATA_FILE, to: BAK_FILE, directory: 'DATA', toDirectory: 'DATA' });
+        } catch (e) { /* no main file yet */ }
+      }
+      // Atomic-ish: write to temp, then rename over the main file, so a kill
+      // mid-write can never corrupt the only copy.
+      try {
+        await P().Filesystem.writeFile({ path: TMP_FILE, directory: 'DATA', encoding: 'utf8', data: text });
+        await P().Filesystem.rename({ from: TMP_FILE, to: DATA_FILE, directory: 'DATA', toDirectory: 'DATA' });
+      } catch (e) {
+        // rename unsupported/failed — fall back to direct write
+        await P().Filesystem.writeFile({ path: DATA_FILE, directory: 'DATA', encoding: 'utf8', data: text });
+      }
     } else {
       localStorage.setItem(LS_KEY, text);
     }

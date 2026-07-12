@@ -43,6 +43,11 @@ function openTaskModal(taskId, presets = {}) {
           `<button data-p="${i}" class="${task.priority === i ? 'active' : ''}">${p}</button>`).join('')}</div>
       </div>
     </div>
+    <div class="field"><label>Color</label>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span id="tm-color"></span>
+        <button class="btn sm ghost" id="tm-color-clear">Default</button>
+      </div></div>
     <div class="field" id="tm-remind-row"><label>Reminder</label>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn sm" id="tm-remind">${icon('bell')} Remind me at due time</button>
@@ -55,6 +60,12 @@ function openTaskModal(taskId, presets = {}) {
         <button class="btn sm ghost" id="tm-addlink">${icon('link')} Link…</button>
       </div>
     </div>`;
+
+  body.querySelector('#tm-color').appendChild(swatchRow(task.color || null, (c) => { task.color = c; }));
+  body.querySelector('#tm-color-clear').addEventListener('click', () => {
+    task.color = null;
+    body.querySelectorAll('#tm-color .swatch').forEach(sw => sw.classList.remove('active'));
+  });
 
   body.querySelector('#tm-prio').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
@@ -191,8 +202,8 @@ Views.tasks = {
     ];
 
     function taskRow(t) {
-      const row = el(`<div class="task-row ${t.done ? 'done' : ''}" data-id="${t.id}">
-        <button class="tcheck ${t.done ? 'on' : ''} ${t.priority ? 'prio-' + t.priority : ''}" title="${t.done ? 'Mark not done' : 'Mark done'}">${icon('check')}</button>
+      const row = el(`<div class="task-row ${t.done ? 'done' : ''}" data-id="${t.id}" ${t.color ? `style="--task-color:${esc(t.color)}"` : ''}>
+        <button class="tcheck ${t.done ? 'on' : ''} ${t.priority ? 'prio-' + t.priority : ''} ${t.color ? 'colored' : ''}" title="${t.done ? 'Mark not done' : 'Mark done'}">${icon('check')}</button>
         <div class="task-main">
           <div class="task-title">${esc(t.title)}</div>
           <div class="task-meta">

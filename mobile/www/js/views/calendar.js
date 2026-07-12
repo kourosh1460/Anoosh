@@ -189,6 +189,7 @@ MViews.calendar = {
           <button class="btn sm" id="cl-today" style="flex:1">Today</button>
           <button class="btn sm" id="cl-convert" style="flex:1">${icon('arrowLR')} Convert</button>
         </div>
+        <div class="cal-filters" id="cl-filters"></div>
         <div class="cal-grid-head" id="cl-dow"></div>
         <div class="cal-grid" id="cl-grid"></div>
         <div class="cal-agenda">
@@ -197,13 +198,32 @@ MViews.calendar = {
         </div>
       </div>`;
 
+    const filters = () => Object.assign({ tasks: true, events: true, reminders: true, cycle: true }, DB.settings().calFilters);
+    function drawFilters() {
+      const wrap = container.querySelector('#cl-filters');
+      const f = filters();
+      const defs = [['events', 'Events', 'calendar'], ['tasks', 'Tasks', 'tasks'], ['reminders', 'Alerts', 'bell']];
+      if (DashModules.isEnabled('cycle') && DashModules.getCycle()) defs.push(['cycle', 'Cycle', 'cycle']);
+      wrap.innerHTML = '';
+      for (const [key, label, ic] of defs) {
+        const chip = el(`<button class="chip link cal-filter ${f[key] ? 'on' : ''}">${icon(ic)}<span>${label}</span></button>`);
+        chip.addEventListener('click', () => {
+          const nf = filters(); nf[key] = !nf[key];
+          DB.setSettings({ calFilters: nf });
+          Platform.haptic();
+        });
+        wrap.appendChild(chip);
+      }
+    }
+
     function itemsOn(dateStr) {
       const out = [];
-      for (const ev of DB.all('events')) if (ev.date === dateStr)
+      const f = filters();
+      if (f.events) for (const ev of DB.all('events')) if (ev.date === dateStr)
         out.push({ kind: 'event', time: ev.time || '', title: ev.title, color: ev.color, item: ev });
-      for (const task of DB.all('tasks')) if (task.dueDate === dateStr)
-        out.push({ kind: 'task', time: task.dueTime || '', title: task.title, color: 'var(--accent)', done: task.done, item: task });
-      for (const r of DB.all('reminders')) {
+      if (f.tasks) for (const task of DB.all('tasks')) if (task.dueDate === dateStr)
+        out.push({ kind: 'task', time: task.dueTime || '', title: task.title, color: task.color || 'var(--accent)', done: task.done, item: task });
+      if (f.reminders) for (const r of DB.all('reminders')) {
         if (!r.at) continue;
         const d = new Date(r.at);
         if (!isNaN(d) && Fmt.dateToStr(d) === dateStr)
@@ -257,6 +277,8 @@ MViews.calendar = {
       head.innerHTML = '';
       for (let i = 0; i < 7; i++) head.appendChild(el(`<div class="cal-dow">${DOW_NAMES[(start + i) % 7]}</div>`));
 
+      drawFilters();
+      const cycleOn = filters().cycle && DashModules.isEnabled('cycle') && DashModules.getCycle();
       const grid = container.querySelector('#cl-grid');
       grid.innerHTML = '';
       const today = Fmt.todayStr();
@@ -283,6 +305,10 @@ MViews.calendar = {
           <span class="cc-alt">${altHtml}</span>
           <div class="cc-dots">${items.slice(0, 3).map(it => `<span class="cc-dot" style="--ev-color:${it.color}"></span>`).join('')}</div>
         </div>`);
+        if (cycleOn) {
+          const phase = DashModules.cyclePhaseFor(ds);
+          if (phase) cell.appendChild(el(`<span class="cc-cycle" style="background:${DashModules.CYCLE_COLORS[phase]}"></span>`));
+        }
         cell.addEventListener('click', () => { selectedDate = ds; drawGrid(); drawAgenda(); });
         grid.appendChild(cell);
       }

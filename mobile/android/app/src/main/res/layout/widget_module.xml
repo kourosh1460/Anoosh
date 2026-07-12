@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/wm_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="13dp">
+
+    <TextView
+        android:id="@+id/wm_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#a78bff"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView android:id="@+id/wm_row1" style="@style/AnooshWidgetRow" />
+    <TextView android:id="@+id/wm_row2" style="@style/AnooshWidgetRow" />
+    <TextView android:id="@+id/wm_row3" style="@style/AnooshWidgetRow" />
+
+    <TextView
+        android:id="@+id/wm_footer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="#6b6987"
+        android:textSize="10sp"
+        android:maxLines="1" />
+</LinearLayout>

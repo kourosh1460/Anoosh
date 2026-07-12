@@ -431,6 +431,23 @@ function buildSettingsPage(body) {
       <div class="set-row"><div class="set-label"><div class="sl-title">Sound</div></div>
         <button class="toggle" id="st-sound"></button></div>
     </div>
+    <div class="card">
+      <div class="card-title">${icon('home')} Dashboard modules</div>
+      <div class="muted" style="font-size:12px;line-height:1.5;margin-bottom:4px">Optional sections for Today. Off by default — toggle one on and it appears immediately.</div>
+      <div id="st-modules"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">${icon('settings')} Security</div>
+      <div class="set-row">
+        <div class="set-label"><div class="sl-title">App lock</div>
+          <div class="sl-sub" id="st-lockstate"></div></div>
+        <span id="st-lockbtns" style="display:flex;gap:8px"></span>
+      </div>
+    </div>
+    <div class="set-row" style="border:none">
+      <div class="set-label"><div class="sl-title">Welcome tour</div><div class="sl-sub">Replay the short introduction</div></div>
+      <button class="btn sm" id="st-tour">${icon('sparkle')} Show</button>
+    </div>
     <div class="muted" style="text-align:center;font-size:11.5px;padding:4px 0 16px">Anoosh for Android — offline, synced, yours.</div>`;
 
   const syncSeg = (seg, attr, value) =>
@@ -519,6 +536,70 @@ function buildSettingsPage(body) {
     DB.setSettings({ timerSound: !s().timerSound });
     soundT.classList.toggle('on', !!s().timerSound);
   });
+
+  /* dashboard modules */
+  const modsEl = body.querySelector('#st-modules');
+  for (const m of DashModules.list()) {
+    const row = el(`<div class="set-row">
+      <div class="set-label"><div class="sl-title">${esc(m.title)}</div><div class="sl-sub">${esc(m.desc)}</div></div>
+      <button class="toggle ${DashModules.isEnabled(m.id) ? 'on' : ''}"></button>
+    </div>`);
+    row.querySelector('.toggle').addEventListener('click', (e) => {
+      const on = !DashModules.isEnabled(m.id);
+      DashModules.setEnabled(m.id, on);
+      e.currentTarget.classList.toggle('on', on);
+      Platform.haptic();
+      toast(on ? `${m.title} added to Today` : `${m.title} removed`, { icon: m.icon });
+    });
+    modsEl.appendChild(row);
+  }
+
+  /* app lock */
+  function pinSheet(title, cb) {
+    const b2 = el(`<div class="field"><label>${esc(title)}</label>
+      <input class="input" type="password" inputmode="numeric" maxlength="10" placeholder="4–10 digits" id="pl-pin"></div>`);
+    const f2 = el(`<div style="width:100%"></div>`);
+    const ok = el(`<button class="btn primary block">Confirm</button>`);
+    f2.appendChild(ok);
+    const m2 = openModal({ title: 'App lock', body: b2, foot: f2 });
+    ok.addEventListener('click', () => { const v = b2.querySelector('#pl-pin').value; m2.close(); cb(v); });
+    setTimeout(() => b2.querySelector('#pl-pin').focus(), 250);
+  }
+  function drawLock() {
+    const rec = s().appLock;
+    body.querySelector('#st-lockstate').textContent = rec
+      ? 'Lock is on — a PIN is required to open Anoosh.'
+      : 'Ask for a PIN when the app opens. You choose it — there is no default.';
+    const btns = body.querySelector('#st-lockbtns');
+    btns.innerHTML = '';
+    if (!rec) {
+      const set = el(`<button class="btn primary sm">Set PIN</button>`);
+      set.addEventListener('click', () => pinSheet('Choose a PIN', async (pin) => {
+        try { DB.setSettings({ appLock: await Lock.create(pin) }); toast('App lock enabled', { icon: 'checkCircle' }); drawLock(); }
+        catch (e) { toast(e.message, { icon: 'x' }); }
+      }));
+      btns.appendChild(set);
+    } else {
+      const requirePin = (then) => pinSheet('Current PIN', async (pin) => {
+        if (await Lock.verify(pin, rec)) then(); else toast('Wrong PIN', { icon: 'x' });
+      });
+      const change = el(`<button class="btn sm">Change</button>`);
+      change.addEventListener('click', () => requirePin(() => pinSheet('New PIN', async (pin) => {
+        try { DB.setSettings({ appLock: await Lock.create(pin) }); toast('PIN changed', { icon: 'checkCircle' }); }
+        catch (e) { toast(e.message, { icon: 'x' }); }
+      })));
+      const remove = el(`<button class="btn sm danger">Remove</button>`);
+      remove.addEventListener('click', () => requirePin(() => {
+        DB.setSettings({ appLock: null });
+        toast('App lock removed', { icon: 'checkCircle' });
+        drawLock();
+      }));
+      btns.append(change, remove);
+    }
+  }
+  drawLock();
+
+  body.querySelector('#st-tour').addEventListener('click', () => showOnboarding(true));
   return () => {};
 }
 

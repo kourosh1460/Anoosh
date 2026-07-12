@@ -19,24 +19,44 @@ const Sync = (() => {
     if (!addr) throw new Error('Enter the address shown on your PC (e.g. 192.168.1.5:38200).');
     if (!/^\d{6}$/.test(String(code || '').trim())) throw new Error('Enter the 6-digit code shown on your PC.');
 
+    await DB.flush(); // everything on disk before we negotiate
     const before = JSON.parse(JSON.stringify(DB.snapshot()));
-    let res;
-    try {
-      res = await fetch(`http://${addr}/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Anoosh-Code': String(code).trim() },
-        body: JSON.stringify({ deviceName: 'Android phone', data: before })
-      });
-    } catch (err) {
-      throw new Error('Could not reach the PC. Same Wi-Fi network? Sync started on the desktop?');
+
+    // Up to 3 attempts with short backoff — Wi-Fi wakeups are flaky.
+    let res = null, lastErr = null;
+    for (let attempt = 0; attempt < 3 && !res; attempt++) {
+      if (attempt) await new Promise(r => setTimeout(r, 1200 * attempt));
+      try {
+        res = await fetch(`http://${addr}/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Anoosh-Code': String(code).trim() },
+          body: JSON.stringify({ deviceName: 'Android phone', data: before })
+        });
+      } catch (err) { lastErr = err; }
     }
+    if (!res) throw new Error('Could not reach the PC. Same Wi-Fi network? Sync started on the desktop?');
     let body;
     try { body = await res.json(); } catch (e) { body = {}; }
     if (res.status === 403) throw new Error(body.error || 'Wrong code.');
     if (!res.ok || !body.ok || !body.data) throw new Error(body.error || 'Sync failed on the PC side.');
 
-    const stats = Merge.diffStats(before, body.data);
-    DB.applyMerged(body.data);
+    // Sanity-check the merged payload before adopting it: refuse anything
+    // that would silently wipe local data.
+    const merged = body.data;
+    const localCount = Merge.COLLECTIONS.reduce((n, c) => n + (before[c] || []).length, 0);
+    const mergedCount = Merge.COLLECTIONS.reduce((n, c) => n + (Array.isArray(merged[c]) ? merged[c].length : 0), 0);
+    const tombs = Array.isArray(merged.tombstones) ? merged.tombstones.length : 0;
+    if (localCount > 0 && mergedCount === 0 && tombs === 0) {
+      throw new Error('The PC sent an empty dataset — sync aborted, nothing was changed on this phone.');
+    }
+
+    const stats = Merge.diffStats(before, merged);
+    try {
+      DB.applyMerged(merged);
+    } catch (err) {
+      DB.applyMerged(before); // roll back to the pre-sync snapshot
+      throw new Error('Applying the sync failed — your local data was restored unchanged.');
+    }
     DB.setSettings({
       syncAddress: addr,
       syncCode: String(code).trim(),

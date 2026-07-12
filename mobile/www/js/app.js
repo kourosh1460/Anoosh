@@ -235,6 +235,47 @@ const App = (() => {
     if (changed) Platform.scheduleReminders(DB.all('reminders'));
   }
 
+  /* ---------- app lock ---------- */
+  let lockOverlay = null;
+  function maybeLock() {
+    const rec = DB.settings().appLock;
+    if (!rec || lockOverlay) return Promise.resolve();
+    return new Promise((resolve) => {
+      lockOverlay = el(`<div class="lock-screen">
+        <div class="lock-card">
+          <div class="tb-logo" style="width:48px;height:48px;border-radius:16px"></div>
+          <div class="lock-title">Anoosh is locked</div>
+          <input class="input lock-pin" type="password" inputmode="numeric" maxlength="10" placeholder="PIN" autocomplete="off">
+          <div class="lock-err" hidden>Wrong PIN — try again</div>
+          <button class="btn primary block" id="lk-go">Unlock</button>
+        </div>
+      </div>`);
+      document.body.appendChild(lockOverlay);
+      const input = lockOverlay.querySelector('.lock-pin');
+      const err = lockOverlay.querySelector('.lock-err');
+      let busy = false;
+      const attempt = async () => {
+        if (busy) return;
+        busy = true;
+        if (await Lock.verify(input.value, rec)) {
+          lockOverlay.remove();
+          lockOverlay = null;
+          resolve();
+        } else {
+          err.hidden = false;
+          input.value = '';
+          Platform.haptic('medium');
+          const card = lockOverlay.querySelector('.lock-card');
+          card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+        }
+        busy = false;
+      };
+      lockOverlay.querySelector('#lk-go').addEventListener('click', attempt);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') attempt(); });
+      setTimeout(() => input.focus(), 120);
+    });
+  }
+
   /* ---------- first run ---------- */
   function firstRunContent() {
     if (DB.all('notes').length || DB.all('tasks').length || DB.all('ideas').length) return;
@@ -266,6 +307,8 @@ const App = (() => {
     document.getElementById('fab').innerHTML = icon('plus');
     document.getElementById('fab').addEventListener('click', openCapture);
     show('today');
+    await maybeLock();
+    showOnboarding();
 
     DB.subscribe((ch) => { if (ch.kind === 'settings') applyTheme(); });
     TimerEngine.subscribe(updateMiniTimer);
@@ -289,9 +332,17 @@ const App = (() => {
 
     // Re-check reminders and refresh widget when app returns to foreground.
     if (Platform.isNative && window.Capacitor.Plugins.App) {
+      let bgAt = 0;
       window.Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => {
-        if (isActive) { catchUpReminders(); }
-        else { DB.flush(); Platform.refreshWidget(); }
+        if (isActive) {
+          catchUpReminders();
+          // Re-lock after 2+ minutes in the background.
+          if (bgAt && Date.now() - bgAt > 120000) maybeLock();
+        } else {
+          bgAt = Date.now();
+          DB.flush();
+          Platform.refreshWidget();
+        }
       });
     }
     window.addEventListener('visibilitychange', () => { if (document.hidden) DB.flush(); });

@@ -14,6 +14,9 @@ const COPIES = [
   ['src/shared/hijri.js', 'js/shared/hijri.js'],
   ['src/shared/jalali.js', 'js/shared/jalali.js'],
   ['src/shared/merge.js', 'js/shared/merge.js'],
+  ['src/shared/lock.js', 'js/shared/lock.js'],
+  ['src/shared/dash-modules.js', 'js/shared/dash-modules.js'],
+  ['src/shared/onboarding.js', 'js/shared/onboarding.js'],
   ['renderer/js/icons.js', 'js/icons.js'],
   ['renderer/js/ui.js', 'js/ui.js'],
   ['renderer/js/timer-engine.js', 'js/timer-engine.js']
