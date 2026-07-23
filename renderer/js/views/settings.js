@@ -172,13 +172,16 @@ Views.settings = {
         key: 'toranj', name: 'Toranj', bg: '#ece2cf', bar: '#faf3e3', text: '#33291d', dots: ['#5c7f4c', '#6f4f2a'],
         variants: [{ theme: 'toranj', color: '#2f6b75' }, { theme: 'toranj-warm', color: '#c1652a' }]
       },
-      { key: 'blossoms', name: 'Blossoms', bg: '#171021', bar: '#251532', text: '#f6ecf6', dots: ['#ff77b6', '#a78bfa'], accent: '#ff77b6' },
+      {
+        key: 'blossoms', name: 'Blossoms', bg: '#171021', bar: '#251532', text: '#f6ecf6', dots: ['#ff77b6', '#a78bfa'],
+        variants: [{ theme: 'blossoms', color: '#ff77b6' }, { theme: 'blossoms-light', color: '#f7d6e8' }]
+      },
       { key: 'system', name: 'System', bg: 'linear-gradient(100deg, #0d0e1a 50%, #eef0fa 50%)', bar: 'rgba(128,128,150,.5)', text: '#9c9ab4', dots: ['#7c5cff'] }
     ];
     const themeGrid = container.querySelector('#st-theme');
     function activeThemeKey() {
       const t = s().theme;
-      return t && t.startsWith('toranj') ? 'toranj' : t;
+      return t && t.startsWith('toranj') ? 'toranj' : t && t.startsWith('blossoms') ? 'blossoms' : t;
     }
     function drawThemeGrid() {
       themeGrid.innerHTML = '';
@@ -186,7 +189,7 @@ Views.settings = {
         const card = el(`<div class="theme-card ${activeThemeKey() === def.key ? 'active' : ''}"
             style="--tc-bg:${def.bg.startsWith('linear') ? 'transparent' : def.bg};--tc-text:${def.text};${def.bg.startsWith('linear') ? `background:${def.bg}` : ''}">
           ${def.variants ? `<div class="tc-variants">${def.variants.map(v =>
-            `<span class="tc-variant ${s().theme === v.theme ? 'on' : ''}" data-vt="${v.theme}" data-va="${v.color}" style="background:${v.color}" title="${v.theme === 'toranj' ? 'Blue variation' : 'Orange variation'}"></span>`).join('')}</div>` : ''}
+            `<span class="tc-variant ${s().theme === v.theme ? 'on' : ''}" data-vt="${v.theme}" data-va="${v.color}" style="background:${v.color}" title="${v.theme}"></span>`).join('')}</div>` : ''}
           <div class="tc-strip">${def.dots.map(d => `<span class="tc-dot" style="background:${d}"></span>`).join('')}<span class="tc-bar" style="background:${def.bar}"></span></div>
           <div class="tc-name">${def.name}</div>
         </div>`);
@@ -195,7 +198,7 @@ Views.settings = {
           if (variant) {
             DB.setSettings({ theme: variant.dataset.vt, accent: variant.dataset.va });
           } else if (def.variants) {
-            const current = s().theme.startsWith('toranj') ? s().theme : def.variants[0].theme;
+            const current = s().theme.startsWith(def.key) ? s().theme : def.variants[0].theme;
             const v = def.variants.find(x => x.theme === current) || def.variants[0];
             DB.setSettings({ theme: v.theme, accent: v.color });
           } else {

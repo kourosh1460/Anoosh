@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /* Anoosh mobile — bootstrap: tabs, subpage stack, FAB, search, back button. */
 
 const App = (() => {
@@ -10,7 +10,7 @@ const App = (() => {
   /* ---------- theming ---------- */
   function applyTheme() {
     const s = DB.settings();
-    const theme = ['dark', 'light', 'onyx', 'toranj', 'toranj-warm', 'blossoms'].includes(s.theme) ? s.theme : 'dark';
+    const theme = ['dark', 'light', 'onyx', 'toranj', 'toranj-warm', 'blossoms', 'blossoms-light'].includes(s.theme) ? s.theme : 'dark';
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.setProperty('--accent', s.accent || '#7c5cff');
     document.documentElement.dataset.fx = s.reduceEffects ? 'off' : 'on';

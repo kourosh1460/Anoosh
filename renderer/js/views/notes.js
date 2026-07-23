@@ -93,8 +93,13 @@ Views.notes = {
                 <button class="tbtn" data-cmd="underline" title="Underline (Ctrl+U)">${icon('underline')}</button>
                 <button class="tbtn" data-cmd="strikeThrough" title="Strikethrough">${icon('strike')}</button>
                 <span class="tsep"></span>
-                <button class="tbtn" data-block="h1" title="Heading 1">${icon('h1')}</button>
-                <button class="tbtn" data-block="h2" title="Heading 2">${icon('h2')}</button>
+                <button class="tbtn" id="tb-font" title="Text size & font">Aa</button>
+                <span class="tsep"></span>
+                <button class="tbtn" data-cmd="justifyLeft" title="Align left">${icon('alignL')}</button>
+                <button class="tbtn" data-cmd="justifyCenter" title="Align center">${icon('alignC')}</button>
+                <button class="tbtn" data-cmd="justifyRight" title="Align right">${icon('alignR')}</button>
+                <button class="tbtn tb-dir" id="tb-rtl" title="Right-to-left (فارسی)">RTL</button>
+                <button class="tbtn tb-dir" id="tb-ltr" title="Left-to-right">LTR</button>
                 <span class="tsep"></span>
                 <button class="tbtn" data-cmd="insertUnorderedList" title="Bullet list">${icon('listUl')}</button>
                 <button class="tbtn" data-cmd="insertOrderedList" title="Numbered list">${icon('listOl')}</button>
@@ -361,6 +366,9 @@ Views.notes = {
       emptyPane.style.display = 'none';
       editorEl.style.display = '';
       titleEl.value = note.title || '';
+      bodyEl.setAttribute('dir', note.dir || 'auto');
+      titleEl.setAttribute('dir', note.dir || 'auto');
+      paintDirButtons(note.dir);
       bodyEl.innerHTML = sanitizeHtml(note.content || '');
       bodyEl.classList.toggle('is-empty', !bodyEl.textContent.trim() && !bodyEl.querySelector('li,img'));
       refreshHeaderState(note);
@@ -389,9 +397,39 @@ Views.notes = {
       if (cardSnip) cardSnip.textContent = DB.textOfHtml(note.content).slice(0, 140) || 'Empty note';
     }
 
+    /* direction: persist per note; auto-detect from first characters */
+    function paintDirButtons(dir) {
+      container.querySelector('#tb-rtl')?.classList.toggle('on', dir === 'rtl');
+      container.querySelector('#tb-ltr')?.classList.toggle('on', dir === 'ltr');
+    }
+    function setNoteDir(dir, manual) {
+      const note = current(); if (!note) return;
+      note.dir = dir;
+      if (manual) note.dirManual = true;
+      bodyEl.setAttribute('dir', dir || 'auto');
+      titleEl.setAttribute('dir', dir || 'auto');
+      paintDirButtons(dir);
+      DB.upsert('notes', note);
+    }
+    container.querySelector('#tb-rtl').addEventListener('click', () => {
+      setNoteDir(current()?.dir === 'rtl' ? null : 'rtl', true);
+    });
+    container.querySelector('#tb-ltr').addEventListener('click', () => {
+      setNoteDir(current()?.dir === 'ltr' ? null : 'ltr', true);
+    });
+    container.querySelector('#tb-font').addEventListener('click', (e) => {
+      if (!current()) return;
+      openFontTools(e.currentTarget, bodyEl, () => saveDebounced());
+    });
+
     titleEl.addEventListener('input', () => saveDebounced());
     bodyEl.addEventListener('input', () => {
       bodyEl.classList.toggle('is-empty', !bodyEl.textContent.trim() && !bodyEl.querySelector('li,img'));
+      const note = current();
+      if (note && !note.dir && !note.dirManual) {
+        const d = detectDir(bodyEl.textContent.slice(0, 80));
+        if (d) setNoteDir(d, false);
+      }
       saveDebounced();
     });
     titleEl.addEventListener('keydown', (e) => {

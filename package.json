@@ -1,7 +1,7 @@
 {
   "name": "anoosh-productivity",
   "productName": "Anoosh",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Anoosh — an offline, native Windows productivity suite: tasks, notes in folders, ideas, calendar (Gregorian + Hijri lunar + Jalali solar), reminders and timers in one connected system.",
   "main": "main.js",
   "author": "Anoosh",

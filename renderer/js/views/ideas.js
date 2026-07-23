@@ -33,6 +33,7 @@ function openIdeaModal(ideaId) {
       </div>
     </div>`;
   body.querySelector('#im-content').innerHTML = sanitizeHtml(idea.content || '');
+  attachTextTools(body.querySelector('#im-content'));
 
   body.querySelector('#im-status').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;

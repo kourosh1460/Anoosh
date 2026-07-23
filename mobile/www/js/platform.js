@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * Platform — adapter between the app and the device.
  * On Android (Capacitor) it uses native storage, notifications, share and
@@ -172,9 +172,9 @@ const Platform = (() => {
     try {
       const BG = {
         dark: '#0d0e1a', light: '#eef0fa', onyx: '#060607',
-        toranj: '#ece2cf', 'toranj-warm': '#ece2cf', blossoms: '#171021'
+        toranj: '#ece2cf', 'toranj-warm': '#ece2cf', blossoms: '#171021', 'blossoms-light': '#f7ecf3'
       };
-      const isLight = theme === 'light' || theme.startsWith('toranj');
+      const isLight = theme === 'light' || theme.startsWith('toranj') || theme === 'blossoms-light';
       await P().StatusBar.setStyle({ style: isLight ? 'LIGHT' : 'DARK' });
       await P().StatusBar.setBackgroundColor({ color: BG[theme] || BG.dark });
     } catch (e) { /* older webview */ }

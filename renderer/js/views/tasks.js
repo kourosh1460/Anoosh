@@ -61,6 +61,7 @@ function openTaskModal(taskId, presets = {}) {
       </div>
     </div>`;
 
+  attachTextTools(body.querySelector('#tm-notes'));
   body.querySelector('#tm-color').appendChild(swatchRow(task.color || null, (c) => { task.color = c; }));
   body.querySelector('#tm-color-clear').addEventListener('click', () => {
     task.color = null;

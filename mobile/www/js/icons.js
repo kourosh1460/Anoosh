@@ -76,6 +76,9 @@
     folder: P('<path d="M3.5 7A2 2 0 0 1 5.5 5h4.2l2.1 2.4h6.7a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>'),
     cycle: P('<path d="M12 3.5c3.2 3.6 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.3-6 5.5-9.6z"/><path d="M9.5 13.2a2.5 2.5 0 0 0 2.3 2.6" stroke-width="1.6"/>'),
     filter: P('<path d="M4 6h16M7 12h10M10 18h4"/>'),
+    alignL: P('<path d="M4 6h16M4 10.5h10M4 15h16M4 19.5h10"/>'),
+    alignC: P('<path d="M4 6h16M7 10.5h10M4 15h16M7 19.5h10"/>'),
+    alignR: P('<path d="M4 6h16M10 10.5h10M4 15h16M10 19.5h10"/>'),
     folderPlus: P('<path d="M3.5 7A2 2 0 0 1 5.5 5h4.2l2.1 2.4h6.7a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5h5"/>'),
     image: P('<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="m4.5 17.5 4.7-4.5 3.4 3.2 2.9-2.7 4 3.8"/>')
   };

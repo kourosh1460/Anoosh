@@ -9,7 +9,7 @@ const App = (() => {
 
   /* ---------- theming ---------- */
   const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
-  const KNOWN_THEMES = ['dark', 'light', 'onyx', 'toranj', 'toranj-warm', 'blossoms'];
+  const KNOWN_THEMES = ['dark', 'light', 'onyx', 'toranj', 'toranj-warm', 'blossoms', 'blossoms-light'];
 
   function applyTheme() {
     const s = DB.settings();

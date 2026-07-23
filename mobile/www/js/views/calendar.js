@@ -47,6 +47,7 @@ function openEventSheet(eventId, presets = {}) {
   };
   body.querySelector('#em-date').addEventListener('input', updateAlt);
   updateAlt();
+  attachTextTools(body.querySelector('#em-notes'));
   body.querySelector('#em-color').appendChild(swatchRow(ev.color, (c) => { ev.color = c; }));
 
   let wantReminder = false;

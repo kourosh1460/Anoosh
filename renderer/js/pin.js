@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /**
  * Pinned note window — a small always-on-top note that stays visible over
  * every other application. Content is editable and live-syncs with the main
@@ -20,7 +20,7 @@
   let saveTimer = null;
 
   function applyTheme(settings) {
-    const KNOWN = ['dark', 'light', 'onyx', 'toranj', 'toranj-warm', 'blossoms'];
+    const KNOWN = ['dark', 'light', 'onyx', 'toranj', 'toranj-warm', 'blossoms', 'blossoms-light'];
     const theme = settings.theme === 'system'
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : (KNOWN.includes(settings.theme) ? settings.theme : 'dark');
@@ -32,6 +32,7 @@
     if (!note) return;
     titleEl.innerHTML = `${icon('pin')}<span>${escapeHtml(note.title || 'Untitled note')}</span>`;
     wrap.style.setProperty('--nh', note.headerColor || '#7c5cff');
+    document.getElementById('pin-content').setAttribute('dir', note.dir || 'auto');
     if (document.activeElement !== contentEl) {
       contentEl.innerHTML = note.content || '';
     }

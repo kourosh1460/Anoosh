@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Anoosh Mobile — design system
    Same visual language as the desktop app, rebuilt for touch:
    bottom tab bar, sheets instead of dialogs, big targets, restrained blur
@@ -124,7 +124,7 @@ html[data-theme^="toranj"] .tb-logo {
 }
 
 /* ---------- Blossoms: night-garden pink & violet ---------- */
-html[data-theme="blossoms"] {
+html[data-theme^="blossoms"] {
   color-scheme: dark;
   --bg: #171021; --bg-deep: #100a18;
   --text: #f6ecf6; --text-dim: #bfa3c8; --text-faint: #8a6f96;
@@ -138,25 +138,25 @@ html[data-theme="blossoms"] {
   --blob-opacity: .5;
   --blossom-violet: #a78bfa;
 }
-html[data-theme="blossoms"] .blob-a { background: color-mix(in srgb, var(--accent) 55%, transparent); }
-html[data-theme="blossoms"] .blob-b { background: color-mix(in srgb, var(--blossom-violet) 52%, transparent); }
-html[data-theme="blossoms"] #anoosh-bg {
+html[data-theme^="blossoms"] .blob-a { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+html[data-theme^="blossoms"] .blob-b { background: color-mix(in srgb, var(--blossom-violet) 52%, transparent); }
+html[data-theme^="blossoms"] #anoosh-bg {
   background: radial-gradient(120vw 60vh at 90% -8%, color-mix(in srgb, var(--blossom-violet) 20%, transparent), transparent 62%), var(--bg);
 }
-html[data-theme="blossoms"] #fab,
-html[data-theme="blossoms"] .btn.primary,
-html[data-theme="blossoms"] .tb-logo {
+html[data-theme^="blossoms"] #fab,
+html[data-theme^="blossoms"] .btn.primary,
+html[data-theme^="blossoms"] .tb-logo {
   background: linear-gradient(135deg, var(--accent), var(--blossom-violet));
 }
-html[data-theme="blossoms"] .timer-phase { color: var(--blossom-violet); }
-html[data-theme="blossoms"] .tcheck { border-radius: 68% 68% 68% 16%; }
-html[data-theme="blossoms"] .swatch { border-radius: 68% 68% 68% 22%; }
-html[data-theme="blossoms"] #fab { border-radius: 62% 62% 62% 20%; }
-html[data-theme="blossoms"] .dash-item .di-icon,
-html[data-theme="blossoms"] .rem-bell,
-html[data-theme="blossoms"] .more-card .mc-icon,
-html[data-theme="blossoms"] .folder-card .fc-icon { border-radius: 60% 60% 60% 18%; }
-html[data-theme="blossoms"] .ne-body ul.checklist li::before { border-radius: 60% 60% 60% 18%; }
+html[data-theme^="blossoms"] .timer-phase { color: var(--blossom-violet); }
+html[data-theme^="blossoms"] .tcheck { border-radius: 68% 68% 68% 16%; }
+html[data-theme^="blossoms"] .swatch { border-radius: 68% 68% 68% 22%; }
+html[data-theme^="blossoms"] #fab { border-radius: 62% 62% 62% 20%; }
+html[data-theme^="blossoms"] .dash-item .di-icon,
+html[data-theme^="blossoms"] .rem-bell,
+html[data-theme^="blossoms"] .more-card .mc-icon,
+html[data-theme^="blossoms"] .folder-card .fc-icon { border-radius: 60% 60% 60% 18%; }
+html[data-theme^="blossoms"] .ne-body ul.checklist li::before { border-radius: 60% 60% 60% 18%; }
 
 html, body { height: 100%; overflow: hidden; }
 body {
@@ -956,3 +956,40 @@ kbd.k { font-family: var(--font); font-size: 10.5px; padding: 2px 6px; border: 1
 .cal-cell { position: relative; }
 .cc-cycle { position: absolute; left: 18%; right: 18%; bottom: 3px; height: 3.5px;
   border-radius: 3px; opacity: .9; }
+
+/* ---------- Blossoms Light: the day-garden variant ---------- */
+html[data-theme="blossoms-light"] {
+  color-scheme: light;
+  --bg: #f7ecf3; --bg-deep: #f0e0ea;
+  --text: #3a2340; --text-dim: #7d5f88; --text-faint: #a98cb2;
+  --surface: rgba(255, 255, 255, .88); --surface-solid: #fdf7fb; --surface-hi: #ffffff;
+  --glass-border: rgba(190, 95, 160, .16); --glass-border-hi: rgba(190, 95, 160, .30);
+  --hairline: rgba(140, 70, 120, .12);
+  --input-bg: rgba(255, 252, 254, .9);
+  --danger: #d33d5e; --ok: #0f9d6c; --warn: #c07c10;
+  --chip-bg: rgba(190, 90, 160, .08);
+  --scrim: rgba(95, 45, 95, .35);
+  --blob-opacity: .5;
+  --blossom-violet: #8b5cf6;
+  --shadow-1: 0 2px 10px rgba(150, 80, 140, .10);
+  --shadow-2: 0 14px 44px rgba(150, 80, 140, .20);
+}
+
+/* ---------- text tools bar (textareas & detail boxes) ---------- */
+.texttools { display: flex; gap: 2px; align-items: center; margin-bottom: 5px; }
+.texttools button {
+  display: inline-grid; place-items: center; min-width: 26px; height: 24px;
+  padding: 0 6px; border: none; border-radius: 6px; background: transparent;
+  color: var(--text-faint); font-family: var(--font); font-size: 10px; font-weight: 700;
+  cursor: pointer;
+}
+.texttools button svg { width: 13px; height: 13px; }
+.texttools button:hover { background: var(--chip-bg); color: var(--text); }
+.texttools button.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.texttools .tt-sep { width: 1px; height: 13px; background: var(--hairline); margin: 0 4px; }
+
+/* editor dir buttons + font popover */
+.tbtn.tb-dir { font-size: 10px; font-weight: 800; letter-spacing: .4px; }
+.fontpop { max-height: 330px; overflow-y: auto; min-width: 210px; }
+.fontpop .fp-head { font-size: 10px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase;
+  color: var(--text-faint); padding: 8px 10px 3px; }

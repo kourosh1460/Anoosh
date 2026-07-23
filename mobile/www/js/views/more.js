@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /* More tab — hub for Timer, Ideas, Reminders, Sync and Settings sub-pages. */
 window.MViews = window.MViews || {};
 
@@ -141,6 +141,7 @@ function openIdeaSheet(ideaId) {
     <div class="field"><label>Details</label>
       <textarea class="textarea" id="im-content" placeholder="Sketch it out…">${esc(DB.textOfHtml(idea.content))}</textarea></div>
   </div>`);
+  attachTextTools(body.querySelector('#im-content'));
   body.querySelector('#im-status').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     idea.status = b.dataset.s;
@@ -462,14 +463,17 @@ function buildSettingsPage(body) {
       key: 'toranj', name: 'Toranj', bg: '#ece2cf', bar: '#faf3e3', text: '#33291d', dots: ['#5c7f4c', '#6f4f2a'],
       variants: [{ theme: 'toranj', color: '#2f6b75' }, { theme: 'toranj-warm', color: '#c1652a' }]
     },
-    { key: 'blossoms', name: 'Blossoms', bg: '#171021', bar: '#251532', text: '#f6ecf6', dots: ['#ff77b6', '#a78bfa'], accent: '#ff77b6' }
+    {
+        key: 'blossoms', name: 'Blossoms', bg: '#171021', bar: '#251532', text: '#f6ecf6', dots: ['#ff77b6', '#a78bfa'],
+        variants: [{ theme: 'blossoms', color: '#ff77b6' }, { theme: 'blossoms-light', color: '#f7d6e8' }]
+      }
   ];
   const themeGrid = body.querySelector('#st-theme');
   function drawThemeGrid() {
     const cur = s().theme;
     themeGrid.innerHTML = '';
     for (const def of THEME_DEFS) {
-      const active = def.variants ? cur.startsWith('toranj') : cur === def.key;
+      const active = def.variants ? cur.startsWith(def.key) : cur === def.key;
       const card = el(`<div class="theme-card ${active ? 'active' : ''}" style="--tc-bg:${def.bg};--tc-text:${def.text}">
         ${def.variants ? `<div class="tc-variants">${def.variants.map(v =>
           `<span class="tc-variant ${cur === v.theme ? 'on' : ''}" data-vt="${v.theme}" data-va="${v.color}" style="background:${v.color}"></span>`).join('')}</div>` : ''}

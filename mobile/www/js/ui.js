@@ -118,13 +118,25 @@ function sanitizeHtml(html) {
         }
         continue;
       }
+      // Filter style down to the font props our size/family picker writes.
+      let keptStyle = '';
+      if (child.hasAttribute('style')) {
+        const size = /font-size:\s*(\d{1,2}px)/.exec(child.getAttribute('style'));
+        const fam = /font-family:\s*([^;"]+)/.exec(child.getAttribute('style'));
+        const align = /text-align:\s*(left|center|right)/.exec(child.getAttribute('style'));
+        if (size) keptStyle += `font-size:${size[1]};`;
+        if (fam) keptStyle += `font-family:${fam[1]};`;
+        if (align && /^(P|DIV|H1|H2|H3|LI|BLOCKQUOTE)$/.test(child.tagName)) keptStyle += `text-align:${align[1]};`;
+      }
       for (const attr of Array.from(child.attributes)) {
         const keep =
           (attr.name === 'href' && child.tagName === 'A' && /^https?:/i.test(child.getAttribute('href'))) ||
           (attr.name === 'class' && ['checklist'].includes(attr.value)) ||
+          (attr.name === 'dir' && ['rtl', 'ltr', 'auto'].includes(attr.value)) ||
           (attr.name === 'data-checked');
         if (!keep) child.removeAttribute(attr.name);
       }
+      if (keptStyle) child.setAttribute('style', keptStyle);
       if (child.tagName === 'A') child.setAttribute('target', '_blank');
     }
   };
@@ -162,6 +174,162 @@ function imageToDataUrl(file, maxDim = 1400) {
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Not a readable image')); };
     img.src = url;
+  });
+}
+
+/* ---------- text direction & typography (Persian/RTL support) ---------- */
+
+/** 'rtl' | 'ltr' | null from the first strong-direction character. */
+function detectDir(text) {
+  const m = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]|[֐-׿؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/.exec(text || '');
+  if (!m) return null;
+  return /[֐-׿؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/.test(m[0]) ? 'rtl' : 'ltr';
+}
+
+/**
+ * Attach a compact align + direction bar above a textarea or contenteditable
+ * detail box. Alignment maps to text-align; RTL/LTR set the dir attribute.
+ * Also auto-detects direction from the first typed characters when unset.
+ */
+function attachTextTools(target) {
+  if (!target || target.dataset.textTools) return;
+  target.dataset.textTools = '1';
+  const isField = target.tagName === 'TEXTAREA' || target.tagName === 'INPUT';
+  const bar = el(`<div class="texttools">
+    <button type="button" data-al="left" title="Align left">${icon('alignL')}</button>
+    <button type="button" data-al="center" title="Align center">${icon('alignC')}</button>
+    <button type="button" data-al="right" title="Align right">${icon('alignR')}</button>
+    <span class="tt-sep"></span>
+    <button type="button" data-dir="rtl" title="Right-to-left (فارسی)">RTL</button>
+    <button type="button" data-dir="ltr" title="Left-to-right">LTR</button>
+  </div>`);
+  target.parentNode.insertBefore(bar, target);
+  const paint = () => {
+    const dir = target.getAttribute('dir');
+    const al = target.style.textAlign || '';
+    bar.querySelectorAll('[data-dir]').forEach(b => b.classList.toggle('on', b.dataset.dir === dir));
+    bar.querySelectorAll('[data-al]').forEach(b => b.classList.toggle('on', b.dataset.al === al));
+  };
+  bar.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus/selection
+  bar.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.dir) {
+      target.setAttribute('dir', target.getAttribute('dir') === b.dataset.dir ? 'auto' : b.dataset.dir);
+      target.dataset.dirManual = '1';
+    } else if (b.dataset.al) {
+      if (isField) {
+        target.style.textAlign = target.style.textAlign === b.dataset.al ? '' : b.dataset.al;
+      } else {
+        target.focus();
+        document.execCommand(b.dataset.al === 'left' ? 'justifyLeft' : b.dataset.al === 'center' ? 'justifyCenter' : 'justifyRight', false, null);
+      }
+    }
+    paint();
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  // First-keystroke auto direction when nothing set explicitly.
+  if (!target.getAttribute('dir')) target.setAttribute('dir', 'auto');
+  target.addEventListener('input', () => {
+    if (target.dataset.dirManual) return;
+    const text = isField ? target.value : target.textContent;
+    const d = detectDir((text || '').slice(0, 80));
+    if (d) target.setAttribute('dir', d);
+    paint();
+  });
+  paint();
+  return bar;
+}
+
+/** Every plain input/textarea in the app gets browser-native auto direction. */
+(function autoDirEverywhere() {
+  const apply = (root) => {
+    root.querySelectorAll('input[type="text"], input:not([type]), textarea, .ne-title, .pal-input')
+      .forEach(i => { if (!i.hasAttribute('dir')) i.setAttribute('dir', 'auto'); });
+  };
+  const mo = new MutationObserver((muts) => {
+    for (const m of muts) for (const n of m.addedNodes) {
+      if (n.nodeType === 1) apply(n.querySelectorAll ? n : document);
+    }
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    apply(document);
+    mo.observe(document.body, { childList: true, subtree: true });
+  });
+})();
+
+/* Font size + family picker for rich editors. Sizes carry suggested uses;
+   families stay deliberately tiny, with an even shorter Persian set. */
+const FONT_SIZES = [
+  { px: 13, label: 'Small — captions' },
+  { px: 16, label: 'Body — everyday text' },
+  { px: 19, label: 'Subheading' },
+  { px: 24, label: 'Heading' },
+  { px: 32, label: 'Display' }
+];
+const FONT_FAMILIES = {
+  Simple: [
+    { name: 'Default', css: '' },
+    { name: 'Serif', css: 'Georgia, serif' },
+    { name: 'Mono', css: 'Consolas, monospace' }
+  ],
+  Fancy: [
+    { name: 'Handwritten', css: '"Segoe Script", cursive' },
+    { name: 'Rounded', css: '"Comic Sans MS", "Segoe UI", cursive' }
+  ],
+  'Persian · فارسی': [
+    { name: 'Default (Vazir-style)', css: '' },
+    { name: 'Tahoma', css: 'Tahoma, "Segoe UI", sans-serif' }
+  ]
+};
+
+/** Normalize the <font> tags execCommand produces into sanitizer-safe spans. */
+function normalizeFontTags(rootEl, px, family) {
+  rootEl.querySelectorAll('font').forEach(f => {
+    let style = '';
+    if (f.getAttribute('size') === '7' && px) style += `font-size:${px}px;`;
+    if (f.getAttribute('face') && family) style += `font-family:${family};`;
+    if (style) {
+      const span = document.createElement('span');
+      span.setAttribute('style', style);
+      while (f.firstChild) span.appendChild(f.firstChild);
+      f.replaceWith(span);
+    } else {
+      // unwrap: keep children, drop the font tag
+      while (f.firstChild) f.parentNode.insertBefore(f.firstChild, f);
+      f.remove();
+    }
+  });
+}
+
+function openFontTools(anchor, bodyEl, onApplied) {
+  const wrap = el(`<div class="fontpop">
+    <div class="fp-head">Size</div>
+    ${FONT_SIZES.map(s => `<button class="menu-item" data-px="${s.px}"><span style="width:30px;font-weight:700">${s.px}</span><span class="muted" style="font-size:12px">${s.label}</span></button>`).join('')}
+    ${Object.entries(FONT_FAMILIES).map(([group, fonts]) => `
+      <div class="fp-head">${group}</div>
+      ${fonts.map(f => `<button class="menu-item" data-fam="${esc(f.css)}"><span style="font-family:${esc(f.css) || 'inherit'}">${f.name}</span></button>`).join('')}`).join('')}
+  </div>`);
+  const pop = openPopover(anchor, wrap);
+  wrap.addEventListener('mousedown', e => e.preventDefault());
+  wrap.addEventListener('click', (e) => {
+    const b = e.target.closest('.menu-item');
+    if (!b) return;
+    bodyEl.focus();
+    if (b.dataset.px) {
+      document.execCommand('fontSize', false, '7');
+      normalizeFontTags(bodyEl, Number(b.dataset.px), undefined);
+    } else {
+      const fam = b.dataset.fam;
+      if (fam) {
+        document.execCommand('fontName', false, fam.split(',')[0].replace(/"/g, ''));
+        normalizeFontTags(bodyEl, null, fam);
+      } else {
+        document.execCommand('removeFormat', false, null);
+      }
+    }
+    pop.close();
+    onApplied && onApplied();
   });
 }
 

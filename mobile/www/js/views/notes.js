@@ -56,8 +56,13 @@ function openNoteEditor(noteId) {
       <button class="tbtn" data-cmd="underline">${icon('underline')}</button>
       <button class="tbtn" data-cmd="strikeThrough">${icon('strike')}</button>
       <span class="tsep"></span>
-      <button class="tbtn" data-block="h1">${icon('h1')}</button>
-      <button class="tbtn" data-block="h2">${icon('h2')}</button>
+      <button class="tbtn" id="tb-font">Aa</button>
+      <span class="tsep"></span>
+      <button class="tbtn" data-cmd="justifyLeft">${icon('alignL')}</button>
+      <button class="tbtn" data-cmd="justifyCenter">${icon('alignC')}</button>
+      <button class="tbtn" data-cmd="justifyRight">${icon('alignR')}</button>
+      <button class="tbtn tb-dir" id="tb-rtl">RTL</button>
+      <button class="tbtn tb-dir" id="tb-ltr">LTR</button>
       <span class="tsep"></span>
       <button class="tbtn" data-cmd="insertUnorderedList">${icon('listUl')}</button>
       <button class="tbtn" data-cmd="insertOrderedList">${icon('listOl')}</button>
@@ -77,6 +82,26 @@ function openNoteEditor(noteId) {
   const linksEl = page.querySelector('#ne-links');
   bodyEl.innerHTML = sanitizeHtml(note.content || '');
   bodyEl.classList.toggle('is-empty', !bodyEl.textContent.trim() && !bodyEl.querySelector('li,img'));
+  bodyEl.setAttribute('dir', note.dir || 'auto');
+  titleEl.setAttribute('dir', note.dir || 'auto');
+
+  /* direction: persist per note; auto-detect on first characters */
+  function paintDirButtons() {
+    page.querySelector('#tb-rtl').classList.toggle('on', note.dir === 'rtl');
+    page.querySelector('#tb-ltr').classList.toggle('on', note.dir === 'ltr');
+  }
+  function setNoteDir(dir, manual) {
+    note.dir = dir;
+    if (manual) note.dirManual = true;
+    bodyEl.setAttribute('dir', dir || 'auto');
+    titleEl.setAttribute('dir', dir || 'auto');
+    paintDirButtons();
+    DB.upsert('notes', note);
+  }
+  page.querySelector('#tb-rtl').addEventListener('click', () => setNoteDir(note.dir === 'rtl' ? null : 'rtl', true));
+  page.querySelector('#tb-ltr').addEventListener('click', () => setNoteDir(note.dir === 'ltr' ? null : 'ltr', true));
+  page.querySelector('#tb-font').addEventListener('click', (e) => openFontTools(e.currentTarget, bodyEl, () => saveDebounced()));
+  paintDirButtons();
 
   function refreshMeta() {
     page.querySelector('#ne-updated').textContent = `Edited ${Fmt.relTime(note.updatedAt)}`;
@@ -102,6 +127,10 @@ function openNoteEditor(noteId) {
   titleEl.addEventListener('input', saveDebounced);
   bodyEl.addEventListener('input', () => {
     bodyEl.classList.toggle('is-empty', !bodyEl.textContent.trim() && !bodyEl.querySelector('li,img'));
+    if (!note.dir && !note.dirManual) {
+      const d = detectDir(bodyEl.textContent.slice(0, 80));
+      if (d) setNoteDir(d, false);
+    }
     saveDebounced();
   });
 
