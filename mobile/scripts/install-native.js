@@ -63,8 +63,13 @@ for (const perm of ['android.permission.POST_NOTIFICATIONS', 'android.permission
     console.log('patched manifest: ' + perm);
   }
 }
+// Habits module was retired — drop its widget receiver if a previous
+// install added it (the data itself is never touched).
+if (manifest.includes('ModuleWidgets$HabitsWidget')) {
+  manifest = manifest.replace(/\s*<receiver[^>]*ModuleWidgets\$HabitsWidget[\s\S]*?<\/receiver>\n?/, '\n');
+  console.log('patched manifest: removed HabitsWidget');
+}
 for (const [cls, label] of [
-  ['ModuleWidgets$HabitsWidget', 'Anoosh Habits'],
   ['ModuleWidgets$FocusWidget', 'Anoosh Focus'],
   ['ModuleWidgets$CountdownWidget', 'Anoosh Countdown']
 ]) {

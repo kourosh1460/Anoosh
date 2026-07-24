@@ -302,6 +302,213 @@ function normalizeFontTags(rootEl, px, family) {
   });
 }
 
+/* ------------------------------------------------------------------ */
+/* Event reminders — the user picks how far ahead to be notified.      */
+/* ------------------------------------------------------------------ */
+const EVENT_REMIND_OFFSETS = [
+  { min: 0, label: 'At event time', short: 'now' },
+  { min: 10, label: '10 minutes before', short: '10 minutes' },
+  { min: 30, label: '30 minutes before', short: '30 minutes' },
+  { min: 60, label: '1 hour before', short: '1 hour' },
+  { min: 180, label: '3 hours before', short: '3 hours' },
+  { min: 1440, label: '1 day before', short: '1 day' }
+];
+
+/** The (not yet completed) reminder linked to this event, if any. */
+function eventLinkedReminder(ev) {
+  for (const l of (ev.links || [])) {
+    if (l.type !== 'reminder') continue;
+    const r = DB.get('reminders', l.id);
+    if (r && !r.done) return r;
+  }
+  return null;
+}
+
+/** Which offset the linked reminder currently sits at, or null. */
+function eventReminderCurrentMin(ev) {
+  const r = eventLinkedReminder(ev);
+  if (!r || !r.at || !ev.date) return null;
+  const base = new Date(`${ev.date}T${ev.time || '09:00'}`);
+  const min = Math.round((base.getTime() - Date.parse(r.at)) / 60000);
+  return EVENT_REMIND_OFFSETS.some(o => o.min === min) ? min : null;
+}
+
+function eventReminderOptionsHtml(selectedMin) {
+  return `<option value="">No reminder</option>` + EVENT_REMIND_OFFSETS.map(o =>
+    `<option value="${o.min}"${selectedMin === o.min ? ' selected' : ''}>${o.label}</option>`).join('');
+}
+
+/**
+ * Create, retime or remove the reminder linked to an event.
+ * value: '' removes it, otherwise minutes-before as a string/number.
+ * Call after the event itself has been upserted.
+ */
+function applyEventReminder(ev, value) {
+  const existing = eventLinkedReminder(ev);
+  if (value === '' || value === null || value === undefined) {
+    if (existing) {
+      DB.unlink({ type: 'event', id: ev.id }, { type: 'reminder', id: existing.id });
+      DB.remove('reminders', existing.id);
+    }
+    return;
+  }
+  const min = Number(value);
+  const base = new Date(`${ev.date}T${ev.time || '09:00'}`);
+  const at = new Date(base.getTime() - min * 60000);
+  const o = EVENT_REMIND_OFFSETS.find(x => x.min === min);
+  const bodyTxt = min === 0
+    ? `Starting now${ev.time ? ' · ' + Fmt.time12(ev.time) : ''}`
+    : `Starts in ${o ? o.short : min + ' min'}${ev.time ? ' · ' + Fmt.time12(ev.time) : ''}`;
+  if (existing) {
+    existing.title = ev.title;
+    existing.body = bodyTxt;
+    existing.at = at.toISOString();
+    existing.done = false;
+    existing.notified = false;
+    DB.upsert('reminders', existing);
+  } else {
+    const rem = DB.newReminder({ title: ev.title, body: bodyTxt, at: at.toISOString() });
+    DB.upsert('reminders', rem);
+    DB.link({ type: 'event', id: ev.id }, { type: 'reminder', id: rem.id });
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Editor undo/redo                                                    */
+/* ------------------------------------------------------------------ */
+/* The browser's native undo stack breaks whenever we touch the DOM
+   directly (checklists, highlights, font normalization), so rich
+   editors use this snapshot history instead. Edits made within 400ms
+   collapse into one step; each snapshot remembers the caret. */
+
+function selCharOffsets(root) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount || !root.contains(sel.anchorNode)) return null;
+  const r = sel.getRangeAt(0);
+  const pre = r.cloneRange();
+  pre.selectNodeContents(root);
+  pre.setEnd(r.startContainer, r.startOffset);
+  const start = pre.toString().length;
+  return { start, end: start + r.toString().length };
+}
+
+function restoreSelFromOffsets(root, off) {
+  root.focus();
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(root);
+  range.collapse(false); // fallback: caret at end
+  if (off) {
+    let idx = 0, found = false, endFound = false;
+    const stack = [root];
+    let node;
+    while (!endFound && (node = stack.pop())) {
+      if (node.nodeType === 3) {
+        const next = idx + node.length;
+        if (!found && off.start >= idx && off.start <= next) {
+          range.setStart(node, off.start - idx); found = true;
+        }
+        if (found && off.end >= idx && off.end <= next) {
+          range.setEnd(node, off.end - idx); endFound = true;
+        }
+        idx = next;
+      } else {
+        let i = node.childNodes.length;
+        while (i--) stack.push(node.childNodes[i]);
+      }
+    }
+    if (found && !endFound) range.collapse(true);
+  }
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+/**
+ * attachEditorHistory(bodyEl, { onApply, onChange })
+ *  - onApply(): called after undo/redo rewrites the content (save it, refresh UI)
+ *  - onChange(h): called whenever canUndo/canRedo may have flipped (paint buttons)
+ * Call h.reset() when a different document is loaded into the editor and
+ * h.snapshot() right after any programmatic DOM change (no input event).
+ */
+function attachEditorHistory(bodyEl, opts = {}) {
+  const LIMIT = 200, GROUP_MS = 400;
+  let undoStack = [], redoStack = [];
+  let last = { html: bodyEl.innerHTML, sel: null };
+  let timer = null, applying = false;
+
+  const changed = () => { opts.onChange && opts.onChange(api); };
+
+  function commit() {
+    clearTimeout(timer); timer = null;
+    if (bodyEl.innerHTML === last.html) return;
+    undoStack.push(last);
+    if (undoStack.length > LIMIT) undoStack.shift();
+    last = { html: bodyEl.innerHTML, sel: selCharOffsets(bodyEl) };
+    redoStack = [];
+    changed();
+  }
+
+  bodyEl.addEventListener('input', () => {
+    if (applying) return;
+    if (redoStack.length) redoStack = [];
+    clearTimeout(timer);
+    timer = setTimeout(commit, GROUP_MS);
+    changed();
+  });
+
+  function apply(snap) {
+    applying = true;
+    bodyEl.innerHTML = snap.html;
+    restoreSelFromOffsets(bodyEl, snap.sel);
+    applying = false;
+    opts.onApply && opts.onApply();
+    changed();
+  }
+
+  const api = {
+    reset() {
+      clearTimeout(timer); timer = null;
+      undoStack = []; redoStack = [];
+      last = { html: bodyEl.innerHTML, sel: null };
+      changed();
+    },
+    snapshot() { if (timer || bodyEl.innerHTML !== last.html) commit(); },
+    canUndo() { return undoStack.length > 0 || !!timer || bodyEl.innerHTML !== last.html; },
+    canRedo() { return redoStack.length > 0; },
+    undo() {
+      api.snapshot();
+      if (!undoStack.length) return;
+      redoStack.push(last);
+      last = undoStack.pop();
+      apply(last);
+    },
+    redo() {
+      api.snapshot(); // pending edits invalidate redo — flush first
+      if (!redoStack.length) return;
+      undoStack.push(last);
+      if (undoStack.length > LIMIT) undoStack.shift();
+      last = redoStack.pop();
+      apply(last);
+    }
+  };
+
+  // Our stack replaces the native one — intercept every undo/redo gesture.
+  bodyEl.addEventListener('keydown', (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if (!mod) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); api.undo(); }
+    else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); api.redo(); }
+  });
+  bodyEl.addEventListener('beforeinput', (e) => {
+    if (e.inputType === 'historyUndo') { e.preventDefault(); api.undo(); }
+    else if (e.inputType === 'historyRedo') { e.preventDefault(); api.redo(); }
+  });
+
+  changed();
+  return api;
+}
+
 function openFontTools(anchor, bodyEl, onApplied) {
   const wrap = el(`<div class="fontpop">
     <div class="fp-head">Size</div>

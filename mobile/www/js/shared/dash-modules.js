@@ -10,64 +10,9 @@
  */
 const DashModules = (() => {
 
-  /* ---------- Habits ---------- */
-  function newHabit(title) {
-    return {
-      id: DB.uid(), title, color: '#14b880', history: {}, links: [],
-      createdAt: DB.now(), updatedAt: DB.now()
-    };
-  }
-
-  function habitStreak(h, today) {
-    let streak = 0, d = today;
-    if (!h.history[d]) d = Fmt.addDays(d, -1); // today not done yet doesn't break it
-    while (h.history[d]) { streak++; d = Fmt.addDays(d, -1); }
-    return streak;
-  }
-
-  function renderHabits(elRoot) {
-    const today = Fmt.todayStr();
-    const habits = [...DB.all('habits')].sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-    elRoot.innerHTML = '';
-    for (const h of habits) {
-      const days = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = Fmt.addDays(today, -i);
-        days.push(`<span class="habit-day ${h.history[d] ? 'on' : ''} ${d === today ? 'today' : ''}" data-d="${d}" style="--hc:${esc(h.color || '#14b880')}"></span>`);
-      }
-      const streak = habitStreak(h, today);
-      const row = el(`<div class="habit-row" data-id="${h.id}">
-        <div class="habit-main">
-          <div class="habit-title">${esc(h.title)}</div>
-          <div class="habit-sub">${streak ? `🔥 ${streak} day${streak === 1 ? '' : 's'}` : 'tap today’s dot to start'}</div>
-        </div>
-        <div class="habit-days">${days.join('')}</div>
-        <button class="iconbtn habit-del">${icon('trash')}</button>
-      </div>`);
-      row.querySelector('.habit-days').addEventListener('click', (e) => {
-        const dot = e.target.closest('.habit-day');
-        if (!dot || dot.dataset.d > today) return;
-        if (h.history[dot.dataset.d]) delete h.history[dot.dataset.d];
-        else h.history[dot.dataset.d] = true;
-        DB.upsert('habits', h);
-      });
-      row.querySelector('.habit-del').addEventListener('click', async () => {
-        if (await confirmDialog(`Delete habit “${h.title}”? Its history goes with it.`)) DB.remove('habits', h.id);
-      });
-      elRoot.appendChild(row);
-    }
-    const addRow = el(`<div style="display:flex;gap:8px;margin-top:${habits.length ? 8 : 0}px">
-      <input class="input sm" placeholder="New habit… (Enter)" style="flex:1;min-width:0">
-    </div>`);
-    const input = addRow.querySelector('input');
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && input.value.trim()) {
-        DB.upsert('habits', newHabit(input.value.trim()));
-        input.value = '';
-      }
-    });
-    elRoot.appendChild(addRow);
-  }
+  /* The 'habits' collection stays in the store/merge schema even though the
+     module is gone — older devices may still sync it, and nobody's data is
+     ever dropped by an update. */
 
   /* ---------- Focus stats (uses existing timer sessions — no new data) ---------- */
   function renderFocus(elRoot) {
@@ -258,7 +203,6 @@ const DashModules = (() => {
 
   const REGISTRY = [
     { id: 'cycle', title: 'Cycle', icon: 'cycle', desc: 'Period, ovulation and PMS predictions — marked on your calendar', render: renderCycle },
-    { id: 'habits', title: 'Habits', icon: 'repeat', desc: 'Daily habit tracker with streaks', render: renderHabits },
     { id: 'focus', title: 'Focus stats', icon: 'zap', desc: 'Your focused time, day by day', render: renderFocus },
     { id: 'countdown', title: 'Countdowns', icon: 'calendar', desc: 'Days left until your next events', render: renderCountdown }
   ];
@@ -285,7 +229,7 @@ const DashModules = (() => {
   return {
     list, isEnabled, enabledList, setEnabled, renderSections,
     cyclePhaseFor, cycleDayFor, getCycle, syncCycleReminder,
-    CYCLE_COLORS, _habitStreak: habitStreak
+    CYCLE_COLORS
   };
 })();
 if (typeof module === 'object' && module.exports) module.exports = DashModules;

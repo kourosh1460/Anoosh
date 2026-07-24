@@ -88,6 +88,9 @@ Views.notes = {
                 <div class="ne-linkchips" id="ne-links"></div>
               </div>
               <div class="ne-toolbar" id="ne-toolbar">
+                <button class="tbtn" id="tb-undo" title="Undo (Ctrl+Z)">${icon('undo')}</button>
+                <button class="tbtn" id="tb-redo" title="Redo (Ctrl+Y)">${icon('redo')}</button>
+                <span class="tsep"></span>
                 <button class="tbtn" data-cmd="bold" title="Bold (Ctrl+B)">${icon('bold')}</button>
                 <button class="tbtn" data-cmd="italic" title="Italic (Ctrl+I)">${icon('italic')}</button>
                 <button class="tbtn" data-cmd="underline" title="Underline (Ctrl+U)">${icon('underline')}</button>
@@ -370,6 +373,7 @@ Views.notes = {
       titleEl.setAttribute('dir', note.dir || 'auto');
       paintDirButtons(note.dir);
       bodyEl.innerHTML = sanitizeHtml(note.content || '');
+      history.reset();
       bodyEl.classList.toggle('is-empty', !bodyEl.textContent.trim() && !bodyEl.querySelector('li,img'));
       refreshHeaderState(note);
       setSaveState('idle');
@@ -378,6 +382,19 @@ Views.notes = {
     }
 
     const saveDebounced = debounce(() => saveNow(), 500);
+
+    /* undo/redo — snapshot history (survives checklist/highlight/font edits) */
+    const history = attachEditorHistory(bodyEl, {
+      onApply() {
+        bodyEl.classList.toggle('is-empty', !bodyEl.textContent.trim() && !bodyEl.querySelector('li,img'));
+        saveDebounced();
+        updateToolbarState();
+      },
+      onChange(h) {
+        container.querySelector('#tb-undo').disabled = !h.canUndo();
+        container.querySelector('#tb-redo').disabled = !h.canRedo();
+      }
+    });
 
     function saveNow() {
       const note = current();
@@ -419,7 +436,7 @@ Views.notes = {
     });
     container.querySelector('#tb-font').addEventListener('click', (e) => {
       if (!current()) return;
-      openFontTools(e.currentTarget, bodyEl, () => saveDebounced());
+      openFontTools(e.currentTarget, bodyEl, () => { history.snapshot(); saveDebounced(); });
     });
 
     titleEl.addEventListener('input', () => saveDebounced());
@@ -449,6 +466,7 @@ Views.notes = {
           toast('That file couldn’t be read as an image', { icon: 'x' });
         }
       }
+      history.snapshot();
       saveDebounced();
       return true;
     }
@@ -506,6 +524,8 @@ Views.notes = {
         container.querySelector('#tb-imgfile').click();
         return;
       }
+      if (btn.id === 'tb-undo') { history.undo(); return; }
+      if (btn.id === 'tb-redo') { history.redo(); return; }
       bodyEl.focus();
       if (btn.dataset.cmd) {
         document.execCommand(btn.dataset.cmd, false, null);
@@ -515,8 +535,10 @@ Views.notes = {
         document.execCommand('formatBlock', false, cur === block ? 'p' : `<${block}>`);
       } else if (btn.id === 'tb-check') {
         toggleChecklist();
+        history.snapshot();
       } else if (btn.id === 'tb-mark') {
         toggleMark();
+        history.snapshot();
       } else if (btn.id === 'tb-clear') {
         document.execCommand('removeFormat', false, null);
         document.execCommand('formatBlock', false, 'p');
@@ -595,6 +617,7 @@ Views.notes = {
       if (e.clientX - rect.left <= 24) {
         if (li.hasAttribute('data-checked')) li.removeAttribute('data-checked');
         else li.setAttribute('data-checked', 'true');
+        history.snapshot();
         saveDebounced();
       }
     });

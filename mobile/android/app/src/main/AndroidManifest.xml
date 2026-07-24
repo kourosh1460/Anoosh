@@ -48,18 +48,6 @@
         </receiver>
     
         <receiver
-            android:name=".ModuleWidgets$HabitsWidget"
-            android:exported="true"
-            android:label="Anoosh Habits">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_module_info" />
-        </receiver>
-    
-        <receiver
             android:name=".ModuleWidgets$FocusWidget"
             android:exported="true"
             android:label="Anoosh Focus">

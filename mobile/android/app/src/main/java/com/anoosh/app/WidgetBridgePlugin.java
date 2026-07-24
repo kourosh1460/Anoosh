@@ -24,7 +24,7 @@ public class WidgetBridgePlugin extends Plugin {
             }
             // module widgets
             android.appwidget.AppWidgetProvider[] mods = {
-                new ModuleWidgets.HabitsWidget(), new ModuleWidgets.FocusWidget(), new ModuleWidgets.CountdownWidget()
+                new ModuleWidgets.FocusWidget(), new ModuleWidgets.CountdownWidget()
             };
             for (android.appwidget.AppWidgetProvider p : mods) {
                 int[] mids = mgr.getAppWidgetIds(new ComponentName(ctx, p.getClass()));

@@ -49,7 +49,7 @@ function openEventModal(eventId, presets = {}) {
       <textarea class="textarea" id="em-notes" placeholder="Location, agenda, anything…">${esc(ev.notes || '')}</textarea></div>
     <div class="field"><label>Reminder</label>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn sm" id="em-remind">${icon('bell')} Remind me 30 min before</button>
+        <select class="input" id="em-remind" style="width:auto;min-width:190px"></select>
         <span class="muted" style="font-size:12px" id="em-remind-state"></span>
       </div></div>
     <div class="field"><label>Linked items</label>
@@ -71,11 +71,13 @@ function openEventModal(eventId, presets = {}) {
   attachTextTools(body.querySelector('#em-notes'));
   body.querySelector('#em-color').appendChild(swatchRow(ev.color, (c) => { ev.color = c; }));
 
-  let wantReminder = false;
-  body.querySelector('#em-remind').addEventListener('click', (e) => {
-    wantReminder = !wantReminder;
-    e.currentTarget.classList.toggle('primary', wantReminder);
-    body.querySelector('#em-remind-state').textContent = wantReminder ? 'Will be created on save' : '';
+  /* Reminder lead time — preselect whatever the linked reminder is set to. */
+  const initialRemindMin = isNew ? null : eventReminderCurrentMin(ev);
+  const remindSel = body.querySelector('#em-remind');
+  remindSel.innerHTML = eventReminderOptionsHtml(initialRemindMin);
+  const remindState = body.querySelector('#em-remind-state');
+  remindSel.addEventListener('change', () => {
+    remindState.textContent = remindSel.value === '' ? '' : 'You’ll get a notification';
   });
 
   const foot = el(`<div style="display:flex;gap:9px;width:100%"></div>`);
@@ -115,13 +117,8 @@ function openEventModal(eventId, presets = {}) {
     ev.endTime = body.querySelector('#em-end').value || null;
     ev.notes = body.querySelector('#em-notes').value;
     DB.upsert('events', ev);
-    if (wantReminder) {
-      const at = new Date(`${ev.date}T${ev.time || '09:00'}`);
-      at.setMinutes(at.getMinutes() - 30);
-      const rem = DB.newReminder({ title: ev.title, body: `Event at ${ev.time ? Fmt.time12(ev.time) : 'today'}`, at: at.toISOString() });
-      DB.upsert('reminders', rem);
-      DB.link({ type: 'event', id: ev.id }, { type: 'reminder', id: rem.id });
-    }
+    if (remindSel.value !== '') applyEventReminder(ev, remindSel.value);
+    else if (initialRemindMin !== null) applyEventReminder(ev, ''); // user switched it off
     toast(isNew ? 'Event added' : 'Event saved', { icon: 'calendar' });
     m.close();
   });

@@ -661,6 +661,7 @@ html[data-theme="onyx"] .note-card { background: var(--surface-solid); }
 }
 .ne-toolbar .tbtn svg { width: 17px; height: 17px; }
 .ne-toolbar .tbtn.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.ne-toolbar .tbtn:disabled { opacity: .35; pointer-events: none; }
 .ne-toolbar .tsep { flex: none; width: 1px; height: 20px; background: var(--hairline); margin: 0 5px; }
 
 .ne-body {
@@ -912,18 +913,6 @@ kbd.k { font-family: var(--font); font-size: 10.5px; padding: 2px 6px; border: 1
 .onb-dots { display: flex; gap: 7px; padding-top: 2px; }
 .onb-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--chip-bg); outline: 1px solid var(--hairline); transition: all .2s; }
 .onb-dots span.on { background: var(--accent); width: 20px; border-radius: 5px; }
-
-.habit-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
-.habit-main { flex: 1; min-width: 0; }
-.habit-title { font-size: 14px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.habit-sub { font-size: 11px; color: var(--text-faint); }
-.habit-days { display: flex; gap: 5px; flex: none; }
-.habit-day { width: 20px; height: 20px; border-radius: 7px;
-  background: var(--chip-bg); border: 1px solid var(--hairline); transition: all .15s; }
-.habit-day.on { background: var(--hc); border-color: var(--hc); }
-.habit-day.today { outline: 2px solid color-mix(in srgb, var(--hc) 55%, transparent); outline-offset: 1px; }
-.habit-row .habit-del { width: 30px; height: 30px; }
-.habit-row .habit-del svg { width: 14px; height: 14px; }
 
 .fs-total { font-size: 20px; font-weight: 750; margin-bottom: 10px; }
 .fs-bars { display: flex; gap: 7px; align-items: flex-end; height: 84px; }

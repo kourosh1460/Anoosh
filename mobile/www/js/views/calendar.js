@@ -35,7 +35,7 @@ function openEventSheet(eventId, presets = {}) {
     <div class="field"><label>Notes</label>
       <textarea class="textarea" id="em-notes" placeholder="Location, agenda…">${esc(ev.notes || '')}</textarea></div>
     <div class="field"><label>Reminder</label>
-      <button class="btn sm" id="em-remind" style="align-self:flex-start">${icon('bell')} 30 min before</button></div>
+      <select class="input" id="em-remind"></select></div>
   </div>`);
 
   const updateAlt = () => {
@@ -50,11 +50,10 @@ function openEventSheet(eventId, presets = {}) {
   attachTextTools(body.querySelector('#em-notes'));
   body.querySelector('#em-color').appendChild(swatchRow(ev.color, (c) => { ev.color = c; }));
 
-  let wantReminder = false;
-  body.querySelector('#em-remind').addEventListener('click', (e) => {
-    wantReminder = !wantReminder;
-    e.currentTarget.classList.toggle('primary', wantReminder);
-  });
+  /* Reminder lead time — preselect whatever the linked reminder is set to. */
+  const initialRemindMin = isNew ? null : eventReminderCurrentMin(ev);
+  const remindSel = body.querySelector('#em-remind');
+  remindSel.innerHTML = eventReminderOptionsHtml(initialRemindMin);
 
   const foot = el(`<div style="display:flex;gap:9px;width:100%"></div>`);
   if (!isNew) {
@@ -75,13 +74,8 @@ function openEventSheet(eventId, presets = {}) {
     ev.time = body.querySelector('#em-time').value || null;
     ev.notes = body.querySelector('#em-notes').value;
     DB.upsert('events', ev);
-    if (wantReminder) {
-      const at = new Date(`${ev.date}T${ev.time || '09:00'}`);
-      at.setMinutes(at.getMinutes() - 30);
-      const rem = DB.newReminder({ title: ev.title, body: 'Upcoming event', at: at.toISOString() });
-      DB.upsert('reminders', rem);
-      DB.link({ type: 'event', id: ev.id }, { type: 'reminder', id: rem.id });
-    }
+    if (remindSel.value !== '') applyEventReminder(ev, remindSel.value);
+    else if (initialRemindMin !== null) applyEventReminder(ev, ''); // user switched it off
     toast(isNew ? 'Event added' : 'Saved', { icon: 'calendar' });
     m.close();
   });

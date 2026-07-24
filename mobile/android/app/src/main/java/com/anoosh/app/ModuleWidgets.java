@@ -20,8 +20,8 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Widgets for the optional dashboard modules (Habits, Focus, Countdown).
- * All three share one layout and read the same JSON data file the web app
+ * Widgets for the optional dashboard modules (Focus, Countdown).
+ * Both share one layout and read the same JSON data file the web app
  * writes. Each is a thin static-inner provider so the manifest can register
  * them individually.
  */
@@ -74,37 +74,6 @@ public class ModuleWidgets {
 
     static void updateAll(Context ctx, AppWidgetManager mgr, int[] ids, RemoteViews v) {
         for (int id : ids) mgr.updateAppWidget(id, v);
-    }
-
-    /** Habits — top streaks. */
-    public static class HabitsWidget extends AppWidgetProvider {
-        @Override public void onUpdate(Context ctx, AppWidgetManager mgr, int[] ids) {
-            JSONObject data = loadData(ctx);
-            String[] rows = new String[3];
-            int n = 0, total = 0;
-            if (data != null) {
-                JSONArray habits = data.optJSONArray("habits");
-                if (habits != null) {
-                    total = habits.length();
-                    for (int i = 0; i < habits.length() && n < 3; i++) {
-                        JSONObject h = habits.optJSONObject(i);
-                        if (h == null) continue;
-                        JSONObject hist = h.optJSONObject("history");
-                        int streak = 0;
-                        if (hist != null) {
-                            String d = today();
-                            if (!hist.optBoolean(d, false)) d = addDays(d, -1);
-                            while (hist.optBoolean(d, false)) { streak++; d = addDays(d, -1); }
-                        }
-                        boolean doneToday = hist != null && hist.optBoolean(today(), false);
-                        rows[n++] = (doneToday ? "✓ " : "○ ") + h.optString("title", "Habit")
-                                + (streak > 0 ? "  ·  " + streak + "d" : "");
-                    }
-                }
-            }
-            String footer = total == 0 ? "No habits yet — add one in Anoosh" : total + " habit" + (total == 1 ? "" : "s");
-            updateAll(ctx, mgr, ids, build(ctx, "Habits", rows, footer));
-        }
     }
 
     /** Focus — today's focused time. */

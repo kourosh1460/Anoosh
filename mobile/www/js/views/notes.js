@@ -51,6 +51,9 @@ function openNoteEditor(noteId) {
       <div class="ne-linkchips" id="ne-links"></div>
     </div>
     <div class="ne-toolbar" id="ne-toolbar">
+      <button class="tbtn" id="tb-undo">${icon('undo')}</button>
+      <button class="tbtn" id="tb-redo">${icon('redo')}</button>
+      <span class="tsep"></span>
       <button class="tbtn" data-cmd="bold">${icon('bold')}</button>
       <button class="tbtn" data-cmd="italic">${icon('italic')}</button>
       <button class="tbtn" data-cmd="underline">${icon('underline')}</button>
@@ -100,7 +103,7 @@ function openNoteEditor(noteId) {
   }
   page.querySelector('#tb-rtl').addEventListener('click', () => setNoteDir(note.dir === 'rtl' ? null : 'rtl', true));
   page.querySelector('#tb-ltr').addEventListener('click', () => setNoteDir(note.dir === 'ltr' ? null : 'ltr', true));
-  page.querySelector('#tb-font').addEventListener('click', (e) => openFontTools(e.currentTarget, bodyEl, () => saveDebounced()));
+  page.querySelector('#tb-font').addEventListener('click', (e) => openFontTools(e.currentTarget, bodyEl, () => { history.snapshot(); saveDebounced(); }));
   paintDirButtons();
 
   function refreshMeta() {
@@ -117,6 +120,19 @@ function openNoteEditor(noteId) {
   refreshHeader();
 
   const saveDebounced = debounce(saveNow, 600);
+
+  /* undo/redo — snapshot history (survives checklist/highlight/font edits) */
+  const history = attachEditorHistory(bodyEl, {
+    onApply() {
+      bodyEl.classList.toggle('is-empty', !bodyEl.textContent.trim() && !bodyEl.querySelector('li,img'));
+      saveDebounced();
+    },
+    onChange(h) {
+      page.querySelector('#tb-undo').disabled = !h.canUndo();
+      page.querySelector('#tb-redo').disabled = !h.canRedo();
+    }
+  });
+
   function saveNow() {
     const t = titleEl.value, c = bodyEl.innerHTML;
     if (note.title === t && note.content === c) return;
@@ -144,6 +160,7 @@ function openNoteEditor(noteId) {
         document.execCommand('insertHTML', false, `<img src="${dataUrl}" alt=""><p></p>`);
       } catch (e) { toast('Could not read that image', { icon: 'x' }); }
     }
+    history.snapshot();
     saveDebounced();
   }
   page.querySelector('#tb-img').addEventListener('click', () => page.querySelector('#tb-imgfile').click());
@@ -170,6 +187,8 @@ function openNoteEditor(noteId) {
   });
   page.querySelector('#ne-toolbar').addEventListener('click', (e) => {
     const btn = e.target.closest('.tbtn'); if (!btn || btn.id === 'tb-img') return;
+    if (btn.id === 'tb-undo') { history.undo(); return; }
+    if (btn.id === 'tb-redo') { history.redo(); return; }
     bodyEl.focus();
     if (btn.dataset.cmd) document.execCommand(btn.dataset.cmd, false, null);
     else if (btn.dataset.block) {
@@ -201,6 +220,7 @@ function openNoteEditor(noteId) {
         sel.removeAllRanges();
       }
     }
+    if (btn.id === 'tb-check' || btn.id === 'tb-mark') history.snapshot();
     saveDebounced();
   });
 
@@ -222,6 +242,7 @@ function openNoteEditor(noteId) {
         if (li.hasAttribute('data-checked')) li.removeAttribute('data-checked');
         else li.setAttribute('data-checked', 'true');
         Platform.haptic();
+        history.snapshot();
         saveDebounced();
       }
     }
